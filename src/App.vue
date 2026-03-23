@@ -7,9 +7,10 @@ const selectedCategory = ref('')
 const selectedProduct = ref(null)
 const showCategoryMenu = ref(false)
 const loading = ref(true)
+const base = import.meta.env.BASE_URL
 
 onMounted(async () => {
-  const res = await fetch('/catalog.json')
+  const res = await fetch(`${base}catalog.json`)
   catalog.value = await res.json()
   loading.value = false
 })
@@ -149,7 +150,7 @@ onMounted(() => document.addEventListener('keydown', onKeydown))
           >
             <div class="card-image">
               <img
-                :src="'/images/' + product.images[0]"
+                :src="`${base}images/` + product.images[0]"
                 :alt="product.description"
                 loading="lazy"
               />
@@ -182,7 +183,7 @@ onMounted(() => document.addEventListener('keydown', onKeydown))
             <img
               v-for="(img, idx) in selectedProduct.images"
               :key="idx"
-              :src="'/images/' + img"
+              :src="`${base}images/` + img"
               :alt="selectedProduct.description"
               class="modal-image"
             />
