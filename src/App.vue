@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const catalog = ref({ categories: [], products: [] })
 const search = ref('')
@@ -11,6 +11,11 @@ const base = import.meta.env.BASE_URL
 // ── Cart ──
 const cart = ref({}) // { [code]: { product, units: number, bulks: number } }
 const showCart = ref(false)
+const showDiscountPanel = ref(false)
+const discounts = ref({}) // { [code]: percentage }
+const expandedModalImg = ref(false)
+let handlingPopstate = false
+const CART_KEY = 'catalogo-cart'
 
 const cartItemCount = computed(() => {
   return Object.values(cart.value).reduce((sum, item) => sum + item.units + item.bulks, 0)
@@ -18,13 +23,21 @@ const cartItemCount = computed(() => {
 
 const cartItems = computed(() => Object.values(cart.value))
 
-const cartTotal = computed(() => {
+const cartOriginal = computed(() => {
   return cartItems.value.reduce((sum, item) => {
-    const unitTotal = (item.product.unit_price || 0) * item.units
-    const bulkTotal = (item.product.bulk_price || 0) * item.bulks
-    return sum + unitTotal + bulkTotal
+    return sum + (item.product.unit_price || 0) * item.units + (item.product.bulk_price || 0) * item.bulks
   }, 0)
 })
+
+const cartTotal = computed(() => {
+  return cartItems.value.reduce((sum, item) => {
+    const subtotal = (item.product.unit_price || 0) * item.units + (item.product.bulk_price || 0) * item.bulks
+    const disc = discounts.value[item.product.code] || 0
+    return sum + subtotal * (1 - disc / 100)
+  }, 0)
+})
+
+const cartSavings = computed(() => cartOriginal.value - cartTotal.value)
 
 function addUnit(product) {
   if (!cart.value[product.code]) {
@@ -56,24 +69,87 @@ function removeBulk(product) {
 
 function removeFromCart(code) {
   delete cart.value[code]
+  delete discounts.value[code]
 }
 
 function clearCart() {
   cart.value = {}
+  discounts.value = {}
 }
 
 function getCartItem(code) {
   return cart.value[code] || null
 }
 
+function setDiscount(code, pct) {
+  const val = Math.max(0, Math.min(100, pct || 0))
+  if (val > 0) {
+    discounts.value[code] = val
+  } else {
+    delete discounts.value[code]
+  }
+}
+
+function getDiscount(code) {
+  return discounts.value[code] || 0
+}
+
+function handleDiscountInput(code, event) {
+  let val = Math.round(+event.target.value || 0)
+  val = Math.max(0, Math.min(100, val))
+  setDiscount(code, val)
+  if (+event.target.value !== val) event.target.value = val || ''
+}
+
+
+// ── Cart persistence ──
+function saveCart() {
+  const data = {}
+  for (const [code, item] of Object.entries(cart.value)) {
+    data[code] = { units: item.units, bulks: item.bulks }
+  }
+  localStorage.setItem(CART_KEY, JSON.stringify(data))
+  localStorage.setItem(CART_KEY + ':discounts', JSON.stringify(discounts.value))
+}
+
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(CART_KEY)
+    if (raw) {
+      const data = JSON.parse(raw)
+      for (const [code, qty] of Object.entries(data)) {
+        const product = catalog.value.products.find(p => String(p.code) === String(code))
+        if (product && (qty.units > 0 || qty.bulks > 0)) {
+          cart.value[code] = { product, units: qty.units || 0, bulks: qty.bulks || 0 }
+        }
+      }
+    }
+    const rawDisc = localStorage.getItem(CART_KEY + ':discounts')
+    if (rawDisc) discounts.value = JSON.parse(rawDisc)
+  } catch (e) { /* ignore corrupt data */ }
+}
+
+watch(cart, saveCart, { deep: true })
+watch(discounts, saveCart, { deep: true })
+
+function formatBulkEquiv(item) {
+  const p = item.product
+  if (!p.units_per_bulk) return ''
+  const totalUnits = item.units + item.bulks * p.units_per_bulk
+  const bulkEquiv = totalUnits / p.units_per_bulk
+  return Number.isInteger(bulkEquiv) ? String(bulkEquiv) : bulkEquiv.toFixed(3).replace('.', ',')
+}
+
 function openCart() {
   showCart.value = true
   document.body.style.overflow = 'hidden'
+  history.pushState({ modal: 'cart' }, '')
 }
 
 function closeCart() {
   showCart.value = false
   document.body.style.overflow = ''
+  if (!handlingPopstate) history.back()
 }
 
 function sendToWhatsApp() {
@@ -88,8 +164,28 @@ function sendToWhatsApp() {
       const subtotal = (p.bulk_price || 0) * item.bulks
       lines.push(`- ${item.bulks}x bulto #${p.code} ${p.description} (${formatPrice(subtotal)})`)
     }
+    // Bulk equivalent info
+    if (p.units_per_bulk && item.units > 0) {
+      const equivStr = formatBulkEquiv(item)
+      if (item.bulks > 0) {
+        lines.push(`  (${item.bulks} bulto${item.bulks > 1 ? 's' : ''} + ${item.units} unid. = ${equivStr} bultos)`)
+      } else {
+        lines.push(`  (${item.units} unid. = ${equivStr} bultos)`)
+      }
+    }
+    // Discount info
+    const disc = discounts.value[p.code] || 0
+    if (disc > 0) {
+      const itemSubtotal = (p.unit_price || 0) * item.units + (p.bulk_price || 0) * item.bulks
+      const discounted = itemSubtotal * (1 - disc / 100)
+      lines.push(`  *-${disc}% desc.* → ${formatPrice(discounted)}`)
+    }
   }
   lines.push('')
+  if (cartSavings.value > 0) {
+    lines.push(`Original: ${formatPrice(cartOriginal.value)}`)
+    lines.push(`Descuento: -${formatPrice(cartSavings.value)}`)
+  }
   lines.push(`*Total: ${formatPrice(cartTotal.value)}*`)
 
   const text = encodeURIComponent(lines.join('\n'))
@@ -104,6 +200,7 @@ onMounted(async () => {
   const res = await fetch(`${base}catalog.json`)
   catalog.value = await res.json()
   loading.value = false
+  loadCart()
 })
 
 const productsWithImages = computed(() =>
@@ -142,12 +239,25 @@ function formatPrice(n) {
 
 function openProduct(product) {
   selectedProduct.value = product
+  showDiscountPanel.value = getDiscount(product.code) > 0
+  expandedModalImg.value = false
   document.body.style.overflow = 'hidden'
+  history.pushState({ modal: 'product' }, '')
+}
+
+function openProductFromCart(product) {
+  showCart.value = false
+  selectedProduct.value = product
+  showDiscountPanel.value = getDiscount(product.code) > 0
+  expandedModalImg.value = false
+  history.replaceState({ modal: 'product' }, '')
 }
 
 function closeProduct() {
+  if (!selectedProduct.value) return
   selectedProduct.value = null
   document.body.style.overflow = ''
+  if (!handlingPopstate) history.back()
 }
 
 function selectCategory(cat) {
@@ -163,8 +273,14 @@ onMounted(() => {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (showCart.value) closeCart()
-      else closeProduct()
+      else if (selectedProduct.value) closeProduct()
     }
+  })
+  window.addEventListener('popstate', () => {
+    handlingPopstate = true
+    if (selectedProduct.value) closeProduct()
+    else if (showCart.value) closeCart()
+    handlingPopstate = false
   })
 })
 </script>
@@ -260,6 +376,9 @@ onMounted(() => {
             <div class="card-cart-badge" v-if="getCartItem(product.code)">
               {{ getCartItem(product.code).units + getCartItem(product.code).bulks }}
             </div>
+            <div class="card-discount-badge" v-if="getDiscount(product.code) > 0">
+              -{{ getDiscount(product.code) }}%
+            </div>
           </div>
         </div>
       </template>
@@ -287,31 +406,49 @@ onMounted(() => {
             </svg>
           </button>
 
-          <div class="modal-image-container">
-            <img
-              v-for="(img, idx) in selectedProduct.images"
-              :key="idx"
-              :src="`${base}images/` + img"
-              :alt="selectedProduct.description"
-              class="modal-image"
-            />
-          </div>
-
           <div class="modal-info">
-            <span class="modal-code">Código #{{ selectedProduct.code }}</span>
-            <h2 class="modal-name">{{ selectedProduct.description }}</h2>
-            <p class="modal-supplier" v-if="selectedProduct.supplier">
-              {{ selectedProduct.supplier }}
-            </p>
+            <div class="modal-header-row">
+              <img
+                :src="`${base}images/` + selectedProduct.images[0]"
+                :alt="selectedProduct.description"
+                class="modal-thumb"
+                @click="expandedModalImg = !expandedModalImg"
+              />
+              <div class="modal-header-text">
+                <span class="modal-code">Código #{{ selectedProduct.code }}</span>
+                <h2 class="modal-name">{{ selectedProduct.description }}</h2>
+                <p class="modal-supplier" v-if="selectedProduct.supplier">
+                  {{ selectedProduct.supplier }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Expanded image carousel -->
+            <div class="modal-image-container" v-if="expandedModalImg">
+              <img
+                v-for="(img, idx) in selectedProduct.images"
+                :key="idx"
+                :src="`${base}images/` + img"
+                :alt="selectedProduct.description"
+                class="modal-image"
+                @click="expandedModalImg = false"
+              />
+            </div>
 
             <div class="price-table" v-if="selectedProduct.unit_price || selectedProduct.bulk_price">
               <div class="price-row" v-if="selectedProduct.unit_price">
                 <span class="price-label-big">Precio por unidad</span>
-                <span class="price-value-big">{{ formatPrice(selectedProduct.unit_price) }}</span>
+                <div class="price-values">
+                  <span class="price-value-big" :class="{ 'price-old': getDiscount(selectedProduct.code) > 0 }">{{ formatPrice(selectedProduct.unit_price) }}</span>
+                  <span class="price-value-big price-new" v-if="getDiscount(selectedProduct.code) > 0">{{ formatPrice(selectedProduct.unit_price * (1 - getDiscount(selectedProduct.code) / 100)) }}</span>
+                </div>
               </div>
               <div class="price-row" v-if="selectedProduct.bulk_price">
                 <span class="price-label-big">Precio por bulto</span>
-                <span class="price-value-big bulk">{{ formatPrice(selectedProduct.bulk_price) }}</span>
+                <div class="price-values">
+                  <span class="price-value-big bulk" :class="{ 'price-old': getDiscount(selectedProduct.code) > 0 }">{{ formatPrice(selectedProduct.bulk_price) }}</span>
+                  <span class="price-value-big price-new" v-if="getDiscount(selectedProduct.code) > 0">{{ formatPrice(selectedProduct.bulk_price * (1 - getDiscount(selectedProduct.code) / 100)) }}</span>
+                </div>
               </div>
               <div class="price-row units" v-if="selectedProduct.units_per_bulk">
                 <span class="price-label-big">Unidades por bulto</span>
@@ -328,6 +465,29 @@ onMounted(() => {
 
             <!-- Add to cart controls -->
             <div class="add-to-cart">
+              <!-- Discount section -->
+              <div class="cart-row" v-if="!showDiscountPanel && getDiscount(selectedProduct.code) <= 0">
+                <span class="cart-row-label">Descuento</span>
+                <button class="discount-toggle-btn" @click="showDiscountPanel = true">Agregar</button>
+              </div>
+              <div class="discount-panel" v-if="showDiscountPanel || getDiscount(selectedProduct.code) > 0">
+                <div class="discount-panel-header">
+                  <span class="cart-row-label">Descuento</span>
+                  <button class="discount-clear-btn" v-if="getDiscount(selectedProduct.code) > 0"
+                    @click="setDiscount(selectedProduct.code, 0); showDiscountPanel = false">Quitar</button>
+                </div>
+                <div class="discount-quick-btns">
+                  <button v-for="pct in [5, 10, 15, 20, 25]" :key="pct"
+                    class="discount-chip" :class="{ active: getDiscount(selectedProduct.code) === pct }"
+                    @click="setDiscount(selectedProduct.code, getDiscount(selectedProduct.code) === pct ? 0 : pct)">
+                    {{ pct }}%
+                  </button>
+                </div>
+                <input type="number" class="discount-input" placeholder="Otro %" min="0" max="100"
+                  :value="[5, 10, 15, 20, 25].includes(getDiscount(selectedProduct.code)) ? '' : (getDiscount(selectedProduct.code) || '')"
+                  @input="handleDiscountInput(selectedProduct.code, $event)" />
+              </div>
+
               <!-- Unit row -->
               <div class="cart-row" v-if="selectedProduct.unit_price">
                 <span class="cart-row-label">Unidades</span>
@@ -372,11 +532,18 @@ onMounted(() => {
         <div class="modal cart-modal">
           <div class="cart-header">
             <h2 class="cart-title">Tu pedido</h2>
-            <button class="modal-close" @click="closeCart" style="position:static;box-shadow:none;background:transparent;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24">
-                <path d="M18 6 6 18M6 6l12 12"/>
-              </svg>
-            </button>
+            <div class="cart-header-actions">
+              <button class="cart-trash-btn" @click="clearCart" v-if="cartItems.length > 0" title="Vaciar pedido">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                  <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/>
+                </svg>
+              </button>
+              <button class="modal-close" @click="closeCart" style="position:static;box-shadow:none;background:transparent;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div v-if="cartItems.length === 0" class="cart-empty">
@@ -386,7 +553,7 @@ onMounted(() => {
 
           <div v-else class="cart-body">
             <div class="cart-item" v-for="item in cartItems" :key="item.product.code">
-              <img :src="`${base}images/` + item.product.images[0]" class="cart-item-img" />
+              <img :src="`${base}images/` + item.product.images[0]" class="cart-item-img" @click="openProductFromCart(item.product)" />
               <div class="cart-item-info">
                 <span class="cart-item-code">#{{ item.product.code }}</span>
                 <p class="cart-item-name">{{ item.product.description }}</p>
@@ -399,7 +566,8 @@ onMounted(() => {
                     <button class="qty-btn plus" @click="addUnit(item.product)">+</button>
                   </div>
                   <span class="cart-item-type">unid.</span>
-                  <span class="cart-item-subtotal">{{ formatPrice(item.product.unit_price * item.units) }}</span>
+                  <span class="cart-item-subtotal" :class="{ 'has-discount': getDiscount(item.product.code) > 0 }">{{ formatPrice(item.product.unit_price * item.units) }}</span>
+                  <span class="cart-item-discounted-price" v-if="getDiscount(item.product.code) > 0">{{ formatPrice(item.product.unit_price * item.units * (1 - getDiscount(item.product.code) / 100)) }}</span>
                 </div>
 
                 <!-- Bulk line -->
@@ -410,7 +578,25 @@ onMounted(() => {
                     <button class="qty-btn plus" @click="addBulk(item.product)">+</button>
                   </div>
                   <span class="cart-item-type">bulto{{ item.bulks > 1 ? 's' : '' }}</span>
-                  <span class="cart-item-subtotal">{{ formatPrice(item.product.bulk_price * item.bulks) }}</span>
+                  <span class="cart-item-subtotal" :class="{ 'has-discount': getDiscount(item.product.code) > 0 }">{{ formatPrice(item.product.bulk_price * item.bulks) }}</span>
+                  <span class="cart-item-discounted-price" v-if="getDiscount(item.product.code) > 0">{{ formatPrice(item.product.bulk_price * item.bulks * (1 - getDiscount(item.product.code) / 100)) }}</span>
+                </div>
+
+                <!-- Combined total when both unit and bulk -->
+                <div class="cart-item-line cart-item-combined" v-if="item.units > 0 && item.bulks > 0">
+                  <span class="cart-item-type">total</span>
+                  <span class="cart-item-subtotal" :class="{ 'has-discount': getDiscount(item.product.code) > 0 }">{{ formatPrice(item.product.unit_price * item.units + item.product.bulk_price * item.bulks) }}</span>
+                  <span class="cart-item-discounted-price" v-if="getDiscount(item.product.code) > 0">{{ formatPrice((item.product.unit_price * item.units + item.product.bulk_price * item.bulks) * (1 - getDiscount(item.product.code) / 100)) }}</span>
+                </div>
+
+                <!-- Discount badge -->
+                <div class="cart-item-discount" v-if="getDiscount(item.product.code) > 0">
+                  <span class="discount-badge">-{{ getDiscount(item.product.code) }}%</span>
+                </div>
+
+                <!-- Bulk equivalent -->
+                <div class="cart-item-bulk-info" v-if="item.product.units_per_bulk && item.units > 0">
+                  {{ item.bulks > 0 ? `${item.bulks} bulto${item.bulks > 1 ? 's' : ''} + ${item.units} unid.` : `${item.units} unid.` }} = {{ formatBulkEquiv(item) }} bultos
                 </div>
               </div>
               <button class="cart-item-remove" @click="removeFromCart(item.product.code)">
@@ -420,10 +606,23 @@ onMounted(() => {
               </button>
             </div>
 
-            <div class="cart-total">
-              <span>Total</span>
-              <span class="cart-total-value">{{ formatPrice(cartTotal) }}</span>
-            </div>
+          </div>
+
+          <div class="cart-footer" v-if="cartItems.length > 0">
+            <table class="cart-total-table">
+              <tr v-if="cartSavings > 0">
+                <td class="cart-total-label">Original</td>
+                <td class="cart-total-num cart-subtotal-value">{{ formatPrice(cartOriginal) }}</td>
+              </tr>
+              <tr v-if="cartSavings > 0">
+                <td class="cart-total-label">Descuento</td>
+                <td class="cart-total-num cart-discount-value">-{{ formatPrice(cartSavings) }}</td>
+              </tr>
+              <tr class="cart-total-main">
+                <td class="cart-total-label">Total</td>
+                <td class="cart-total-num cart-total-value">{{ formatPrice(cartTotal) }}</td>
+              </tr>
+            </table>
 
             <button class="whatsapp-btn" @click="sendToWhatsApp">
               <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
@@ -912,19 +1111,45 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
+.modal-header-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #f9fafb;
+  flex-shrink: 0;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.modal-header-text {
+  min-width: 0;
+  flex: 1;
+}
+
 .modal-image-container {
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   background: #f9fafb;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  cursor: pointer;
 }
 
 .modal-image {
   min-width: 100%;
-  max-height: 300px;
+  max-height: 260px;
   object-fit: contain;
   scroll-snap-align: start;
-  padding: 16px;
+  padding: 12px;
 }
 
 .modal-info {
@@ -1122,8 +1347,19 @@ body {
 }
 
 .cart-body {
-  padding: 12px 16px 24px;
+  padding: 12px 16px 12px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.cart-footer {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding: 12px 16px 24px;
+  border-top: 2px solid #1a1a2e;
+  flex-shrink: 0;
 }
 
 /* ── Cart items ── */
@@ -1147,6 +1383,7 @@ body {
   background: #f9fafb;
   flex-shrink: 0;
   padding: 4px;
+  cursor: pointer;
 }
 
 .cart-item-info {
@@ -1204,22 +1441,53 @@ body {
   color: #ef4444;
 }
 
-/* ── Cart total ── */
-.cart-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  margin-top: 8px;
-  border-top: 2px solid #1a1a2e;
+/* ── Cart total table ── */
+.cart-total-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cart-total-table td {
+  border: none;
+  padding: 2px 0;
+}
+
+.cart-total-label {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: left;
+}
+
+.cart-total-num {
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Liberation Mono', monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cart-subtotal-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.cart-discount-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.cart-total-main .cart-total-label {
   font-size: 16px;
   font-weight: 700;
   color: #1a1a2e;
+  padding-top: 6px;
 }
 
 .cart-total-value {
   font-size: 22px;
+  font-weight: 700;
   color: #059669;
+  padding-top: 6px;
 }
 
 /* ── WhatsApp button ── */
@@ -1266,5 +1534,190 @@ body {
 
 .clear-cart-btn:hover {
   color: #ef4444;
+}
+
+.cart-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-trash-btn {
+  background: none;
+  border: none;
+  color: #d1d5db;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.cart-trash-btn:hover {
+  color: #ef4444;
+}
+
+.cart-item-bulk-info {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ── Discount controls ── */
+.discount-toggle-btn {
+  padding: 6px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.discount-toggle-btn:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.discount-panel {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.discount-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.discount-clear-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-family: inherit;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.discount-quick-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.discount-chip {
+  padding: 6px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.discount-chip:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.discount-chip.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #fff;
+}
+
+.discount-input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #f9fafb;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.discount-input:focus {
+  border-color: #f59e0b;
+  background: #fff;
+}
+
+.cart-item-discount {
+  margin-top: 4px;
+}
+
+.discount-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.card-discount-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+
+.cart-item-subtotal.has-discount {
+  text-decoration: line-through;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.cart-item-discounted-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #059669;
+  margin-left: 4px;
+}
+
+.cart-item-combined {
+  padding-top: 4px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.cart-item-combined .cart-item-type {
+  font-weight: 600;
+  color: #374151;
+}
+
+.price-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-old {
+  text-decoration: line-through;
+  color: #9ca3af !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.price-new {
+  color: #059669 !important;
 }
 </style>
