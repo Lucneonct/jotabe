@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+const html2pdfModule = () => import('html2pdf.js')
 
 const TOKEN_SALT = 'No-es-un-secret-real-al-final-yo-cargo-los-pedidos-a-mano'
 
@@ -255,17 +256,25 @@ function togglePdfSelectAll() {
 function exportPdf() {
   showPdfModal.value = false
   showPdfPreview.value = true
-  const done = () => {
-    showPdfPreview.value = false
-    window.removeEventListener('afterprint', done)
-  }
-  window.addEventListener('afterprint', done)
   nextTick(() => {
     const imgs = document.querySelectorAll('.pdf-content img')
     const loads = Array.from(imgs).map(img =>
       img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r })
     )
-    Promise.all(loads).then(() => window.print())
+    Promise.all(loads).then(async () => {
+      const { default: html2pdf } = await html2pdfModule()
+      const el = document.querySelector('.pdf-content')
+      html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: pdfHasCartItems.value ? 'presupuesto.pdf' : 'catalogo.pdf',
+        image: { type: 'jpeg', quality: 0.92 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      }).from(el).save().then(() => {
+        showPdfPreview.value = false
+      })
+    })
   })
 }
 
@@ -1028,7 +1037,7 @@ onMounted(() => {
     <!-- PDF print preview -->
     <Teleport to="body">
       <div v-if="showPdfPreview" class="pdf-overlay">
-        <button class="pdf-close-preview" @click="showPdfPreview = false">Cerrar vista previa</button>
+        <div class="pdf-generating">Generando PDF...</div>
         <div class="pdf-content">
           <div class="pdf-header-row">
             <img src="https://distribuidorajotabe.com.ar/wp-content/uploads/2024/07/cropped-FEED-JOTABE-143x63.png" alt="Jotabe" class="pdf-logo" />
@@ -2571,21 +2580,20 @@ body {
   padding: 20px;
 }
 
-.pdf-close-preview {
+.pdf-generating {
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 10000;
-  padding: 8px 16px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 10px;
+  background: #1a1a2e;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
   font-family: inherit;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
 
 .pdf-content {
@@ -2797,7 +2805,7 @@ body {
     padding: 0 !important;
   }
 
-  .pdf-close-preview {
+  .pdf-generating {
     display: none !important;
   }
 
