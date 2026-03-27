@@ -533,7 +533,7 @@ onMounted(() => {
     <header class="header">
       <div class="header-top">
         <h1 class="logo">
-          <img src="https://distribuidorajotabe.com.ar/wp-content/uploads/2024/07/cropped-FEED-JOTABE-143x63.png" alt="Jotabe" class="logo-img" />
+          <img :src="`${base}images/logo-jotabe.png`" alt="Jotabe" class="logo-img" />
         </h1>
         <div class="header-right">
           <span class="product-count" v-if="!loading">
@@ -1040,7 +1040,7 @@ onMounted(() => {
         <div class="pdf-generating">Generando PDF...</div>
         <div class="pdf-content">
           <div class="pdf-header-row">
-            <img src="https://distribuidorajotabe.com.ar/wp-content/uploads/2024/07/cropped-FEED-JOTABE-143x63.png" alt="Jotabe" class="pdf-logo" />
+            <img :src="`${base}images/logo-jotabe.png`" alt="Jotabe" class="pdf-logo" />
             <h1 class="pdf-title">{{ pdfHasCartItems ? 'Presupuesto' : 'Catálogo de Productos' }}</h1>
           </div>
           <p class="pdf-date">{{ new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
