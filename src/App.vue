@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 
 const TOKEN_SALT = 'No-es-un-secret-real-al-final-yo-cargo-los-pedidos-a-mano'
 
@@ -46,6 +46,9 @@ const isEditor = ref(false)
 const editorBrandSelect = ref('')
 const editorBrandPct = ref(10)
 const shareTooltip = ref(false)
+const showPdfModal = ref(false)
+const showPdfPreview = ref(false)
+const pdfBrands = ref({})
 let handlingPopstate = false
 const CART_KEY = 'catalogo-cart'
 
@@ -231,6 +234,41 @@ function clearDiscountConfig() {
   discounts.value = {}
 }
 
+function openPdfModal() {
+  const brands = {}
+  const products = pdfHasCartItems.value
+    ? cartItems.value.map(item => item.product)
+    : productsWithImages.value
+  const unique = [...new Set(products.map(p => p.supplier))].sort()
+  for (const b of unique) brands[b] = true
+  pdfBrands.value = brands
+  showPdfModal.value = true
+}
+
+function togglePdfSelectAll() {
+  const next = !pdfAllSelected.value
+  for (const key of Object.keys(pdfBrands.value)) {
+    pdfBrands.value[key] = next
+  }
+}
+
+function exportPdf() {
+  showPdfModal.value = false
+  showPdfPreview.value = true
+  const done = () => {
+    showPdfPreview.value = false
+    window.removeEventListener('afterprint', done)
+  }
+  window.addEventListener('afterprint', done)
+  nextTick(() => {
+    const imgs = document.querySelectorAll('.pdf-content img')
+    const loads = Array.from(imgs).map(img =>
+      img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r })
+    )
+    Promise.all(loads).then(() => window.print())
+  })
+}
+
 // ── Cart persistence ──
 function saveCart() {
   const data = {}
@@ -386,6 +424,47 @@ const hasAnyDiscount = computed(() => {
   return Object.keys(brandDiscounts.value).length > 0 || Object.keys(discounts.value).length > 0
 })
 
+// ── PDF export ──
+const pdfHasCartItems = computed(() => cartItems.value.length > 0)
+
+const pdfProducts = computed(() => {
+  let products
+  if (pdfHasCartItems.value) {
+    products = cartItems.value.map(item => item.product)
+  } else {
+    products = productsWithImages.value
+  }
+  return products.filter(p => pdfBrands.value[p.supplier])
+})
+
+const pdfGrouped = computed(() => {
+  const groups = {}
+  for (const p of pdfProducts.value) {
+    const key = p.supplier || 'Sin categoría'
+    if (!groups[key]) groups[key] = []
+    groups[key].push(p)
+  }
+  return Object.entries(groups).sort((a, b) => {
+    const aDisc = brandDiscounts.value[a[0]] ? 0 : 1
+    const bDisc = brandDiscounts.value[b[0]] ? 0 : 1
+    if (aDisc !== bDisc) return aDisc - bDisc
+    return a[0].localeCompare(b[0])
+  })
+})
+
+const pdfHasAnyDiscount = computed(() => {
+  return pdfProducts.value.some(p => getDiscount(p.code) > 0)
+})
+
+const pdfAllSelected = computed(() => {
+  const vals = Object.values(pdfBrands.value)
+  return vals.length > 0 && vals.every(v => v)
+})
+
+const pdfBrandList = computed(() => {
+  return Object.entries(pdfBrands.value).sort((a, b) => a[0].localeCompare(b[0]))
+})
+
 function formatPrice(n) {
   if (n == null) return '-'
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -444,7 +523,9 @@ onMounted(() => {
     <!-- Header -->
     <header class="header">
       <div class="header-top">
-        <h1 class="logo">Catálogo</h1>
+        <h1 class="logo">
+          <img src="https://distribuidorajotabe.com.ar/wp-content/uploads/2024/07/cropped-FEED-JOTABE-143x63.png" alt="Jotabe" class="logo-img" />
+        </h1>
         <div class="header-right">
           <span class="product-count" v-if="!loading">
             {{ filteredProducts.length }} productos
@@ -502,6 +583,12 @@ onMounted(() => {
           </button>
           <button class="clear-config-btn" @click="clearDiscountConfig" v-if="hasAnyDiscount">
             Limpiar todo
+          </button>
+          <button class="pdf-btn" @click="openPdfModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Exportar PDF
           </button>
         </div>
       </div>
@@ -887,6 +974,125 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
+
+    <!-- PDF brand selection modal -->
+    <Teleport to="body">
+      <div v-if="showPdfModal" class="modal-overlay" @click.self="showPdfModal = false">
+        <div class="modal pdf-config-modal">
+          <div class="cart-header">
+            <h2 class="cart-title">Exportar PDF</h2>
+            <button class="modal-close" @click="showPdfModal = false" style="position:static;box-shadow:none;background:transparent;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24">
+                <path d="M18 6 6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="pdf-config-body">
+            <p class="pdf-config-info" v-if="pdfHasCartItems">
+              Exportando <strong>{{ cartItems.length }} productos</strong> del pedido
+            </p>
+            <p class="pdf-config-info" v-else>
+              Exportando <strong>todos los productos</strong> del catálogo (ofertas primero)
+            </p>
+
+            <div class="pdf-brand-selector">
+              <label class="pdf-brand-check">
+                <input type="checkbox" :checked="pdfAllSelected" @change="togglePdfSelectAll" />
+                <span class="pdf-brand-check-text"><strong>Todas las marcas</strong></span>
+              </label>
+              <div class="pdf-brand-list">
+                <label class="pdf-brand-check" v-for="[brand, selected] in pdfBrandList" :key="brand">
+                  <input type="checkbox" v-model="pdfBrands[brand]" />
+                  <span class="pdf-brand-check-text">
+                    {{ brand }}
+                    <span class="supplier-discount-badge" v-if="brandDiscounts[brand]" style="font-size:10px;padding:1px 6px;">-{{ brandDiscounts[brand] }}%</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="pdf-config-footer">
+            <button class="export-pdf-action" @click="exportPdf" :disabled="pdfProducts.length === 0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Exportar {{ pdfProducts.length }} productos
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- PDF print preview -->
+    <Teleport to="body">
+      <div v-if="showPdfPreview" class="pdf-overlay">
+        <button class="pdf-close-preview" @click="showPdfPreview = false">Cerrar vista previa</button>
+        <div class="pdf-content">
+          <div class="pdf-header-row">
+            <img src="https://distribuidorajotabe.com.ar/wp-content/uploads/2024/07/cropped-FEED-JOTABE-143x63.png" alt="Jotabe" class="pdf-logo" />
+            <h1 class="pdf-title">{{ pdfHasCartItems ? 'Presupuesto' : 'Catálogo de Productos' }}</h1>
+          </div>
+          <p class="pdf-date">{{ new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
+
+          <div class="pdf-brand-section" v-for="[supplier, products] in pdfGrouped" :key="supplier">
+            <h2 class="pdf-brand-header">
+              {{ supplier }}
+              <span class="pdf-brand-badge" v-if="brandDiscounts[supplier]">-{{ brandDiscounts[supplier] }}%</span>
+            </h2>
+            <table class="pdf-table">
+              <thead>
+                <tr>
+                  <th class="pdf-col-img">Imagen</th>
+                  <th class="pdf-col-detail">Detalle producto</th>
+                  <th class="pdf-col-qty" v-if="pdfHasCartItems">Cantidad</th>
+                  <th class="pdf-col-price">Precio unitario lista</th>
+                  <th class="pdf-col-discount" v-if="pdfHasAnyDiscount">Precio bonificado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="product in products" :key="product.code">
+                  <td class="pdf-cell-img">
+                    <img :src="`${base}images/` + product.images[0]" :alt="product.description" />
+                  </td>
+                  <td class="pdf-cell-detail">
+                    <span class="pdf-product-code">#{{ product.code }}</span>
+                    <span class="pdf-product-name">{{ product.description }}</span>
+                    <span class="pdf-product-bulk" v-if="product.units_per_bulk">{{ product.units_per_bulk }} unid/bulto</span>
+                  </td>
+                  <td class="pdf-cell-qty" v-if="pdfHasCartItems">
+                    <template v-if="getCartItem(product.code)">
+                      <span v-if="getCartItem(product.code).units > 0">{{ getCartItem(product.code).units }} unid.</span>
+                      <span v-if="getCartItem(product.code).units > 0 && getCartItem(product.code).bulks > 0"> + </span>
+                      <span v-if="getCartItem(product.code).bulks > 0">{{ getCartItem(product.code).bulks }} bulto{{ getCartItem(product.code).bulks > 1 ? 's' : '' }}</span>
+                    </template>
+                  </td>
+                  <td class="pdf-cell-price">
+                    <span v-if="product.unit_price">{{ formatPrice(product.unit_price) }}</span>
+                    <span v-else class="pdf-no-price">Consultar</span>
+                  </td>
+                  <td class="pdf-cell-discount" v-if="pdfHasAnyDiscount">
+                    <template v-if="getDiscount(product.code) > 0 && product.unit_price">
+                      <span class="pdf-new-price">{{ formatPrice(product.unit_price * (1 - getDiscount(product.code) / 100)) }}</span>
+                      <span class="pdf-savings">(-{{ formatPrice(product.unit_price * getDiscount(product.code) / 100) }})</span>
+                      <span class="pdf-discount-pct" v-if="discounts[product.code] && discounts[product.code] !== brandDiscounts[product.supplier]">-{{ discounts[product.code] }}%</span>
+                    </template>
+                    <template v-else>
+                      <span class="pdf-no-discount">-</span>
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pdf-footer-note">
+            <p>* Precios con IVA incluido</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -938,9 +1144,13 @@ body {
 }
 
 .logo {
-  font-size: 22px;
-  font-weight: 700;
-  color: #2563eb;
+  display: flex;
+  align-items: center;
+}
+
+.logo-img {
+  height: 36px;
+  object-fit: contain;
 }
 
 .product-count {
@@ -2231,5 +2441,404 @@ body {
   padding: 4px 8px;
   background: #fef3c7;
   border-radius: 6px;
+}
+
+/* ── PDF export button ── */
+.pdf-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pdf-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* ── PDF config modal ── */
+.pdf-config-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.pdf-config-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.pdf-config-info {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 16px;
+}
+
+.pdf-brand-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pdf-brand-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pdf-brand-check:hover {
+  background: #f9fafb;
+}
+
+.pdf-brand-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pdf-brand-check-text {
+  font-size: 13px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdf-brand-list {
+  margin-left: 8px;
+  border-left: 2px solid #e5e7eb;
+  padding-left: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pdf-config-footer {
+  padding: 12px 20px 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.export-pdf-action {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+.export-pdf-action:hover {
+  background: #1d4ed8;
+}
+
+.export-pdf-action:disabled {
+  background: #93c5fd;
+  cursor: default;
+}
+
+/* ── PDF print overlay ── */
+.pdf-overlay {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 9999;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.pdf-close-preview {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  padding: 8px 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pdf-content {
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+}
+
+.pdf-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.pdf-logo {
+  height: 40px;
+  object-fit: contain;
+}
+
+.pdf-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.pdf-date {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.pdf-brand-section {
+  margin-bottom: 24px;
+  page-break-inside: auto;
+}
+
+.pdf-brand-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdf-brand-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.pdf-table thead {
+  background: #f9fafb;
+}
+
+.pdf-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.pdf-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.pdf-table tr {
+  page-break-inside: avoid;
+}
+
+.pdf-col-img { width: 56px; }
+.pdf-col-detail { }
+.pdf-col-qty { width: 100px; text-align: center; }
+.pdf-col-price { width: 140px; text-align: right; }
+.pdf-col-discount { width: 170px; text-align: right; }
+
+.pdf-cell-img img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #f9fafb;
+  padding: 2px;
+}
+
+.pdf-cell-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pdf-product-code {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.pdf-product-name {
+  font-size: 12px;
+  color: #1a1a2e;
+  font-weight: 500;
+}
+
+.pdf-product-bulk {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.pdf-cell-qty {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.pdf-cell-price {
+  text-align: right;
+  font-weight: 600;
+  color: #374151;
+}
+
+.pdf-bulk-price {
+  display: none;
+}
+
+.pdf-no-price {
+  color: #9ca3af;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.pdf-cell-discount {
+  text-align: right;
+}
+
+.pdf-new-price {
+  font-weight: 600;
+  color: #059669;
+  font-size: 12px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pdf-savings {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-left: 2px;
+}
+
+.pdf-discount-pct {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 9px;
+  font-weight: 600;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+.pdf-bulk-discount {
+  color: #059669;
+  font-weight: 500;
+}
+
+.pdf-no-discount {
+  color: #d1d5db;
+}
+
+.pdf-footer-note {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: right;
+}
+
+/* ── Print styles ── */
+@media print {
+  body > *:not(.pdf-overlay) {
+    display: none !important;
+  }
+
+  .pdf-overlay {
+    position: static !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .pdf-close-preview {
+    display: none !important;
+  }
+
+  .pdf-brand-section {
+    page-break-inside: auto;
+  }
+
+  .pdf-brand-header {
+    page-break-after: avoid;
+  }
+
+  .pdf-table tr {
+    page-break-inside: avoid;
+  }
+
+  .pdf-table {
+    font-size: 11px;
+  }
+
+  .pdf-cell-img img {
+    width: 36px;
+    height: 36px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .pdf-brand-badge,
+  .pdf-discount-pct {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .pdf-brand-header {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .pdf-new-price {
+    color: #34d399 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 </style>
