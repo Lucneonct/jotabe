@@ -1,6 +1,33 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 
+const TOKEN_SALT = 'No-es-un-secret-real-al-final-yo-cargo-los-pedidos-a-mano'
+
+function simpleHash(str) {
+  let h = 0
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i)
+    h |= 0
+  }
+  return Math.abs(h).toString(36)
+}
+
+function encodeToken(payload) {
+  const json = JSON.stringify(payload)
+  const encoded = btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return encoded + '.' + simpleHash(json + TOKEN_SALT)
+}
+
+function decodeToken(token) {
+  try {
+    const [encoded, hash] = token.split('.')
+    const padded = encoded.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - encoded.length % 4) % 4)
+    const json = atob(padded)
+    if (simpleHash(json + TOKEN_SALT) !== hash) return null
+    return JSON.parse(json)
+  } catch (e) { return null }
+}
+
 const catalog = ref({ categories: [], products: [] })
 const search = ref('')
 const selectedCategory = ref('')
@@ -14,6 +41,11 @@ const showCart = ref(false)
 const showDiscountPanel = ref(false)
 const discounts = ref({}) // { [code]: percentage }
 const expandedModalImg = ref(false)
+const brandDiscounts = ref({})
+const isEditor = ref(false)
+const editorBrandSelect = ref('')
+const editorBrandPct = ref(10)
+const shareTooltip = ref(false)
 let handlingPopstate = false
 const CART_KEY = 'catalogo-cart'
 
@@ -91,7 +123,12 @@ function setDiscount(code, pct) {
 }
 
 function getDiscount(code) {
-  return discounts.value[code] || 0
+  if (discounts.value[code]) return discounts.value[code]
+  const product = productByCode.value[code]
+  if (product && brandDiscounts.value[product.supplier]) {
+    return brandDiscounts.value[product.supplier]
+  }
+  return 0
 }
 
 function handleDiscountInput(code, event) {
@@ -101,6 +138,98 @@ function handleDiscountInput(code, event) {
   if (+event.target.value !== val) event.target.value = val || ''
 }
 
+// ── Brand discounts ──
+function setBrandDiscount(supplier, pct) {
+  const val = Math.max(0, Math.min(100, pct || 0))
+  if (val > 0) {
+    brandDiscounts.value[supplier] = val
+  } else {
+    delete brandDiscounts.value[supplier]
+  }
+}
+
+function addEditorBrandDiscount() {
+  if (editorBrandSelect.value && editorBrandPct.value > 0) {
+    setBrandDiscount(editorBrandSelect.value, editorBrandPct.value)
+  }
+}
+
+// ── URL discount params (encoded token) ──
+function parseUrlDiscounts() {
+  const params = new URLSearchParams(window.location.search)
+  isEditor.value = params.has('editor')
+
+  const token = params.get('t')
+  if (!token) return
+
+  const payload = decodeToken(token)
+  if (!payload) return
+
+  const cats = catalog.value.categories
+
+  if (payload.bd) {
+    for (const [idx, pct] of Object.entries(payload.bd)) {
+      const supplier = cats[Number(idx)]
+      if (supplier && pct > 0) brandDiscounts.value[supplier] = pct
+    }
+  }
+
+  if (payload.d) {
+    for (const [code, pct] of Object.entries(payload.d)) {
+      if (pct > 0) discounts.value[code] = pct
+    }
+  }
+}
+
+function generateShareUrl() {
+  const pageUrl = window.location.href.split('?')[0]
+  const url = new URL(pageUrl)
+
+  const payload = {}
+
+  const cats = catalog.value.categories
+  const bd = {}
+  for (const [supplier, pct] of Object.entries(brandDiscounts.value)) {
+    const catIndex = cats.indexOf(supplier)
+    if (pct > 0 && catIndex >= 0) bd[catIndex] = pct
+  }
+  if (Object.keys(bd).length) payload.bd = bd
+
+  const d = {}
+  for (const [code, pct] of Object.entries(discounts.value)) {
+    if (pct > 0) d[code] = pct
+  }
+  if (Object.keys(d).length) payload.d = d
+
+  if (Object.keys(payload).length) {
+    url.searchParams.set('t', encodeToken(payload))
+  }
+
+  return url.toString()
+}
+
+function copyShareUrl() {
+  const url = generateShareUrl()
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+  } else {
+    const ta = document.createElement('textarea')
+    ta.value = url
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+  }
+  shareTooltip.value = true
+  setTimeout(() => shareTooltip.value = false, 2000)
+}
+
+function clearDiscountConfig() {
+  brandDiscounts.value = {}
+  discounts.value = {}
+}
 
 // ── Cart persistence ──
 function saveCart() {
@@ -200,7 +329,16 @@ onMounted(async () => {
   const res = await fetch(`${base}catalog.json`)
   catalog.value = await res.json()
   loading.value = false
+
+  const params = new URLSearchParams(window.location.search)
+  const hasUrlParams = params.has('t') || params.has('editor')
+
   loadCart()
+
+  if (hasUrlParams) {
+    discounts.value = {}
+    parseUrlDiscounts()
+  }
 })
 
 const productsWithImages = computed(() =>
@@ -222,6 +360,14 @@ const filteredProducts = computed(() => {
   return list
 })
 
+const productByCode = computed(() => {
+  const map = {}
+  for (const p of catalog.value.products) {
+    map[p.code] = p
+  }
+  return map
+})
+
 const groupedBySupplier = computed(() => {
   const groups = {}
   for (const p of filteredProducts.value) {
@@ -230,6 +376,14 @@ const groupedBySupplier = computed(() => {
     groups[key].push(p)
   }
   return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
+})
+
+const offersProducts = computed(() => {
+  return productsWithImages.value.filter(p => getDiscount(p.code) > 0)
+})
+
+const hasAnyDiscount = computed(() => {
+  return Object.keys(brandDiscounts.value).length > 0 || Object.keys(discounts.value).length > 0
 })
 
 function formatPrice(n) {
@@ -334,6 +488,50 @@ onMounted(() => {
       </div>
     </header>
 
+    <!-- Editor panel -->
+    <div v-if="isEditor" class="editor-panel">
+      <div class="editor-header">
+        <h3 class="editor-title">Editor de descuentos</h3>
+        <div class="editor-actions">
+          <button class="share-btn" @click="copyShareUrl" :disabled="!hasAnyDiscount">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+            <span v-if="shareTooltip">Copiado!</span>
+            <span v-else>Compartir URL</span>
+          </button>
+          <button class="clear-config-btn" @click="clearDiscountConfig" v-if="hasAnyDiscount">
+            Limpiar todo
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-brand-section">
+        <label class="editor-label">Descuento por marca</label>
+        <div class="editor-brand-form">
+          <select v-model="editorBrandSelect" class="editor-select">
+            <option value="">Seleccionar marca...</option>
+            <option v-for="cat in catalog.categories" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+          <div class="editor-pct-input">
+            <input type="number" v-model.number="editorBrandPct" min="1" max="100" class="editor-pct" />
+            <span class="editor-pct-symbol">%</span>
+          </div>
+          <button class="editor-add-btn" @click="addEditorBrandDiscount" :disabled="!editorBrandSelect">+</button>
+        </div>
+
+        <div class="editor-brand-list" v-if="Object.keys(brandDiscounts).length > 0">
+          <div class="editor-brand-item" v-for="(pct, supplier) in brandDiscounts" :key="supplier">
+            <span class="editor-brand-name">{{ supplier }}</span>
+            <span class="editor-brand-pct">-{{ pct }}%</span>
+            <button class="editor-brand-remove" @click="setBrandDiscount(supplier, 0)">&times;</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="editor-hint">Tocá un producto para agregar descuento individual</p>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
@@ -347,8 +545,48 @@ onMounted(() => {
         <button class="clear-filters-btn" @click="clearFilters">Limpiar filtros</button>
       </div>
 
+      <!-- Offers section -->
+      <template v-if="hasAnyDiscount && offersProducts.length > 0">
+        <h2 class="supplier-title offers-title">Ofertas</h2>
+        <div class="product-grid">
+          <div
+            class="product-card offer-card"
+            v-for="product in offersProducts"
+            :key="'offer-' + product.code"
+            @click="openProduct(product)"
+          >
+            <div class="card-image">
+              <img
+                :src="`${base}images/` + product.images[0]"
+                :alt="product.description"
+                loading="lazy"
+              />
+            </div>
+            <div class="card-info">
+              <span class="card-code">#{{ product.code }}</span>
+              <p class="card-name">{{ product.description }}</p>
+              <p class="card-price" v-if="product.unit_price">
+                <span class="card-price-old">{{ formatPrice(product.unit_price) }}</span>
+                {{ formatPrice(product.unit_price * (1 - getDiscount(product.code) / 100)) }}
+                <span class="price-label">/ unidad</span>
+              </p>
+              <p class="card-price no-price" v-else>Consultar precio</p>
+            </div>
+            <div class="card-cart-badge" v-if="getCartItem(product.code)">
+              {{ getCartItem(product.code).units + getCartItem(product.code).bulks }}
+            </div>
+            <div class="card-discount-badge">
+              -{{ getDiscount(product.code) }}%
+            </div>
+          </div>
+        </div>
+      </template>
+
       <template v-for="[supplier, products] in groupedBySupplier" :key="supplier">
-        <h2 class="supplier-title">{{ supplier }}</h2>
+        <h2 class="supplier-title">
+          {{ supplier }}
+          <span class="supplier-discount-badge" v-if="brandDiscounts[supplier]">-{{ brandDiscounts[supplier] }}%</span>
+        </h2>
         <div class="product-grid">
           <div
             class="product-card"
@@ -366,7 +604,12 @@ onMounted(() => {
             <div class="card-info">
               <span class="card-code">#{{ product.code }}</span>
               <p class="card-name">{{ product.description }}</p>
-              <p class="card-price" v-if="product.unit_price">
+              <p class="card-price" v-if="product.unit_price && getDiscount(product.code) > 0">
+                <span class="card-price-old">{{ formatPrice(product.unit_price) }}</span>
+                {{ formatPrice(product.unit_price * (1 - getDiscount(product.code) / 100)) }}
+                <span class="price-label">/ unidad</span>
+              </p>
+              <p class="card-price" v-else-if="product.unit_price">
                 {{ formatPrice(product.unit_price) }}
                 <span class="price-label">/ unidad</span>
               </p>
@@ -465,17 +708,20 @@ onMounted(() => {
 
             <!-- Add to cart controls -->
             <div class="add-to-cart">
-              <!-- Discount section -->
-              <div class="cart-row" v-if="!showDiscountPanel && getDiscount(selectedProduct.code) <= 0">
+              <!-- Discount section (editor mode) -->
+              <div class="cart-row" v-if="isEditor && !showDiscountPanel && getDiscount(selectedProduct.code) <= 0">
                 <span class="cart-row-label">Descuento</span>
                 <button class="discount-toggle-btn" @click="showDiscountPanel = true">Agregar</button>
               </div>
-              <div class="discount-panel" v-if="showDiscountPanel || getDiscount(selectedProduct.code) > 0">
+              <div class="discount-panel" v-if="isEditor && (showDiscountPanel || getDiscount(selectedProduct.code) > 0)">
                 <div class="discount-panel-header">
                   <span class="cart-row-label">Descuento</span>
-                  <button class="discount-clear-btn" v-if="getDiscount(selectedProduct.code) > 0"
-                    @click="setDiscount(selectedProduct.code, 0); showDiscountPanel = false">Quitar</button>
+                  <button class="discount-clear-btn" v-if="discounts[selectedProduct.code] > 0"
+                    @click="setDiscount(selectedProduct.code, 0)">Quitar</button>
                 </div>
+                <p class="discount-brand-note" v-if="!discounts[selectedProduct.code] && brandDiscounts[selectedProduct.supplier]">
+                  Aplicado por marca ({{ brandDiscounts[selectedProduct.supplier] }}%)
+                </p>
                 <div class="discount-quick-btns">
                   <button v-for="pct in [5, 10, 15, 20, 25]" :key="pct"
                     class="discount-chip" :class="{ active: getDiscount(selectedProduct.code) === pct }"
@@ -486,6 +732,11 @@ onMounted(() => {
                 <input type="number" class="discount-input" placeholder="Otro %" min="0" max="100"
                   :value="[5, 10, 15, 20, 25].includes(getDiscount(selectedProduct.code)) ? '' : (getDiscount(selectedProduct.code) || '')"
                   @input="handleDiscountInput(selectedProduct.code, $event)" />
+              </div>
+              <!-- Discount display (view mode) -->
+              <div class="cart-row" v-if="!isEditor && getDiscount(selectedProduct.code) > 0">
+                <span class="cart-row-label">Descuento</span>
+                <span class="discount-badge">-{{ getDiscount(selectedProduct.code) }}%</span>
               </div>
 
               <!-- Unit row -->
@@ -1719,5 +1970,266 @@ body {
 
 .price-new {
   color: #059669 !important;
+}
+
+/* ── Editor panel ── */
+.editor-panel {
+  background: #fffbeb;
+  border-bottom: 2px solid #f59e0b;
+  padding: 14px 16px;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.share-btn:hover {
+  background: #1d4ed8;
+}
+
+.share-btn:disabled {
+  background: #93c5fd;
+  cursor: default;
+}
+
+.clear-config-btn {
+  padding: 7px 14px;
+  border: 1.5px solid #fca5a5;
+  border-radius: 8px;
+  background: #fff;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clear-config-btn:hover {
+  background: #fef2f2;
+}
+
+.editor-brand-section {
+  margin-bottom: 8px;
+}
+
+.editor-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #78350f;
+  margin-bottom: 8px;
+}
+
+.editor-brand-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.editor-select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+  color: #374151;
+  outline: none;
+}
+
+.editor-select:focus {
+  border-color: #f59e0b;
+}
+
+.editor-pct-input {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 8px 0 0;
+  overflow: hidden;
+}
+
+.editor-pct {
+  width: 48px;
+  padding: 8px 6px;
+  border: none;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+  background: transparent;
+}
+
+.editor-pct-symbol {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.editor-add-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.editor-add-btn:hover {
+  background: #d97706;
+}
+
+.editor-add-btn:disabled {
+  background: #fde68a;
+  cursor: default;
+}
+
+.editor-brand-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editor-brand-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+}
+
+.editor-brand-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-brand-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.editor-brand-remove {
+  background: none;
+  border: none;
+  color: #d1d5db;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.editor-brand-remove:hover {
+  color: #ef4444;
+}
+
+.editor-hint {
+  font-size: 12px;
+  color: #92400e;
+  font-style: italic;
+}
+
+/* ── Offers section ── */
+.offers-title {
+  color: #b45309 !important;
+  border-bottom-color: #f59e0b !important;
+}
+
+.offers-title::before {
+  content: '\2605 ';
+}
+
+.offer-card {
+  border: 2px solid #fde68a;
+}
+
+.card-price-old {
+  text-decoration: line-through;
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 11px;
+  margin-right: 4px;
+}
+
+/* ── Supplier discount badge ── */
+.supplier-discount-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ── Brand discount note in product modal ── */
+.discount-brand-note {
+  font-size: 12px;
+  color: #92400e;
+  font-style: italic;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: #fef3c7;
+  border-radius: 6px;
 }
 </style>
