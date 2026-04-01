@@ -209,15 +209,39 @@ async function handleApi(req, res, pathname) {
     return streamBuffer(res, buffer, filename);
   }
 
-  // POST /api/pdf/items
+  // POST /api/pdf/items — cart mode with quantities
   if (pathname === '/api/pdf/items' && req.method === 'POST') {
     const body = JSON.parse(await readBody(req));
-    const products = (body.item_codes || []).map((c) => catalog.products.find((p) => p.code === c)).filter(Boolean);
+    const codes = body.item_codes || (body.items || []).map(i => i.code) || [];
+    const products = codes.map((c) => catalog.products.find((p) => p.code === c)).filter(Boolean);
     if (products.length === 0) return json(res, { error: 'No products found for given codes' }, 400);
+
     const itemDisc = {};
     if (body.discounts) { for (const [k, v] of Object.entries(body.discounts)) itemDisc[Number(k)] = v; }
-    const filename = body.filename || 'productos_seleccionados.pdf';
-    const buffer = await generatePDF(products, { title: 'Productos Seleccionados', filename, itemDiscounts: itemDisc });
+
+    // Build cartItems map from body.items (if provided with quantities)
+    let cartItems = null;
+    if (body.items && body.items.length > 0) {
+      cartItems = {};
+      for (const item of body.items) cartItems[item.code] = { units: item.units || 0, bulks: item.bulks || 0 };
+    }
+
+    const resolvedBD = {};
+    if (body.brand_discounts) {
+      for (const [k, v] of Object.entries(body.brand_discounts)) {
+        const full = resolveFullBrand(k);
+        if (full) resolvedBD[full] = v;
+      }
+    }
+
+    const filename = body.filename || (cartItems ? 'presupuesto.pdf' : 'productos_seleccionados.pdf');
+    const buffer = await generatePDF(products, {
+      title: cartItems ? 'Presupuesto' : 'Productos Seleccionados',
+      filename,
+      brandDiscounts: resolvedBD,
+      itemDiscounts: itemDisc,
+      cartItems,
+    });
     return streamBuffer(res, buffer, filename);
   }
 

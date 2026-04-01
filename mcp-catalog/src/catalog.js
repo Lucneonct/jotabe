@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
 
 // ---------------------------------------------------------------------------
 // Paths & config
@@ -110,71 +111,221 @@ function encodeToken(payload) {
 }
 
 // ---------------------------------------------------------------------------
-// PDF generation
+// PDF generation — table layout matching presupuesto style
 // ---------------------------------------------------------------------------
-function generatePDF(products, opts = {}) {
+
+// Image cache: WebP → PNG buffer (avoids re-converting same image)
+const imageCache = new Map();
+
+async function getProductImage(product) {
+  if (!product.images || product.images.length === 0) return null;
+  const imgFile = product.images[0];
+  const imgPath = path.join(IMAGES_PATH, imgFile);
+  if (!fs.existsSync(imgPath)) return null;
+
+  if (imageCache.has(imgPath)) return imageCache.get(imgPath);
+  try {
+    const png = await sharp(imgPath).resize(50, 50, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } }).png().toBuffer();
+    imageCache.set(imgPath, png);
+    return png;
+  } catch { return null; }
+}
+
+// opts.cartItems: { [code]: { units, bulks } } — when present, cart mode
+async function generatePDF(products, opts = {}) {
   const {
     title = 'Catálogo de Productos',
     filename = 'catalogo.pdf',
     brandDiscounts = {},
     itemDiscounts = {},
+    cartItems = null, // null = catalog mode, object = cart mode
   } = opts;
 
   const hasAnyDiscount = Object.keys(brandDiscounts).length > 0 || Object.keys(itemDiscounts).length > 0;
+  const isCart = cartItems && Object.keys(cartItems).length > 0;
+
+  // Pre-load all product images in parallel
+  const imageMap = new Map();
+  await Promise.all(products.map(async (p) => {
+    const img = await getProductImage(p);
+    if (img) imageMap.set(p.code, img);
+  }));
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
+    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true, autoFirstPage: false });
+    doc.addPage();
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
 
-    const logoPath = path.join(IMAGES_PATH, 'logo-jotabe.png');
-    const logoExists = fs.existsSync(logoPath);
-    if (logoExists) doc.image(logoPath, 40, 25, { width: 55 });
+    const PAGE_W = 595.28;
+    const MARGIN = 40;
+    const CONTENT_W = PAGE_W - MARGIN * 2;
+    const ROW_H = 65;
+    const IMG_SIZE = 45;
 
-    const hx = logoExists ? 105 : 40;
-    doc.fontSize(18).font('Helvetica-Bold').text(title, hx, 30);
-    doc.fontSize(9).font('Helvetica').text(
-      `Generado: ${new Date().toLocaleDateString('es-AR')}`,
-      hx, 52,
-    );
+    // Column layouts per mode
+    const COL_IMG = MARGIN;
+    const COL_DETAIL = MARGIN + 60;
+    let COL_QTY, COL_PRICE, COL_LAST;
 
-    const cols = hasAnyDiscount
-      ? [
-          { label: 'Cód.',        x: 40,  w: 40  },
-          { label: 'Descripción', x: 82,  w: 145 },
-          { label: 'Marca',       x: 229, w: 85  },
-          { label: 'P.Unit.',     x: 316, w: 55  },
-          { label: 'P.Bulto',     x: 373, w: 55  },
-          { label: 'Dto%',        x: 430, w: 30  },
-          { label: 'P.Unit.Dto.', x: 462, w: 55  },
-          { label: 'P.Bulto Dto.',x: 519, w: 55  },
-        ]
-      : [
-          { label: 'Cód.',        x: 40,  w: 50  },
-          { label: 'Descripción', x: 92,  w: 200 },
-          { label: 'Marca',       x: 294, w: 110 },
-          { label: 'U/Bulto',     x: 406, w: 45  },
-          { label: 'P.Unitario',  x: 453, w: 65  },
-          { label: 'P.Bulto',     x: 520, w: 65  },
-        ];
-
-    const tableLeft = 40;
-    const tableRight = cols[cols.length - 1].x + cols[cols.length - 1].w;
-    const tableW = tableRight - tableLeft;
-    const ROW_H = 13;
-
-    function drawHeader(y) {
-      doc.save();
-      doc.rect(tableLeft, y - 2, tableW, 15).fill('#2563eb');
-      doc.fillColor('white').fontSize(7).font('Helvetica-Bold');
-      for (const c of cols) doc.text(c.label, c.x + 2, y, { width: c.w - 4, ellipsis: true });
-      doc.restore();
-      doc.fillColor('black');
-      return y + 16;
+    if (isCart) {
+      // IMAGEN | DETALLE | CANTIDAD | PRECIO UNIT. | SUBTOTAL
+      COL_QTY = MARGIN + 240;
+      COL_PRICE = MARGIN + 320;
+      COL_LAST = MARGIN + 420;
+    } else if (hasAnyDiscount) {
+      // IMAGEN | DETALLE | PRECIO LISTA | PRECIO BONIFICADO
+      COL_PRICE = MARGIN + 300;
+      COL_LAST = MARGIN + 420;
+    } else {
+      // IMAGEN | DETALLE | PRECIO UNITARIO
+      COL_PRICE = MARGIN + 360;
     }
 
-    let y = drawHeader(80);
-    let rowIdx = 0;
+    // ── Title with logo ──
+    const logoPath = path.join(IMAGES_PATH, 'logo-jotabe.png');
+    const logoExists = fs.existsSync(logoPath);
+
+    // Logo is 143x63 (ratio ~2.27:1)
+    const LOGO_H = 35;
+    const LOGO_W = Math.round(LOGO_H * 2.27); // ~80
+
+    function drawTitle(y) {
+      if (logoExists) {
+        doc.image(logoPath, MARGIN, y, { width: LOGO_W, height: LOGO_H });
+      }
+      const textX = logoExists ? MARGIN + LOGO_W + 10 : MARGIN;
+      doc.fontSize(22).font('Helvetica-Bold').fillColor('#111827');
+      doc.text(title, textX, y, { width: CONTENT_W - (textX - MARGIN) });
+      doc.fontSize(9).font('Helvetica').fillColor('#6b7280');
+      doc.text(new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }), textX, y + 26);
+      doc.fillColor('black');
+      return y + 50;
+    }
+
+    // ── Brand header ──
+    function drawBrandHeader(supplier, brandDisc, y) {
+      doc.save();
+      doc.roundedRect(MARGIN, y, CONTENT_W, 24, 3).fill('#374151');
+      doc.fillColor('white').fontSize(10).font('Helvetica-Bold');
+      doc.text(supplier, MARGIN + 10, y + 6, { width: CONTENT_W - 80, lineBreak: false });
+      if (brandDisc > 0) {
+        const pillX = PAGE_W - MARGIN - 55;
+        doc.roundedRect(pillX, y + 3, 45, 18, 9).fill('#059669');
+        doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
+        doc.text(`-${brandDisc}%`, pillX, y + 7, { width: 45, align: 'center', lineBreak: false });
+      }
+      doc.restore();
+      doc.fillColor('black');
+      return y + 30;
+    }
+
+    // ── Column headers ──
+    function drawColumnHeaders(y) {
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#6b7280');
+      doc.text('IMAGEN', COL_IMG, y, { width: 55, lineBreak: false });
+      doc.text('DETALLE PRODUCTO', COL_DETAIL, y, { width: 170, lineBreak: false });
+
+      if (isCart) {
+        doc.text('CANTIDAD', COL_QTY, y, { width: 70, lineBreak: false });
+        doc.text('PRECIO UNITARIO', COL_PRICE, y, { width: 90, lineBreak: false });
+        doc.text('SUBTOTAL', COL_LAST, y, { width: 90, lineBreak: false });
+      } else if (hasAnyDiscount) {
+        doc.text('PRECIO UNITARIO\nLISTA', COL_PRICE, y - 2, { width: 100 });
+        doc.text('PRECIO BONIFICADO', COL_LAST, y, { width: 100, lineBreak: false });
+      } else {
+        doc.text('PRECIO UNITARIO', COL_PRICE, y, { width: 100, lineBreak: false });
+      }
+
+      doc.fillColor('black');
+      const ly = y + 14;
+      doc.moveTo(MARGIN, ly).lineTo(PAGE_W - MARGIN, ly).strokeColor('#d1d5db').lineWidth(0.5).stroke();
+      return ly + 4;
+    }
+
+    // ── Product row ── returns line subtotal for cart mode
+    function drawProductRow(product, discount, y) {
+      // Image
+      if (imageMap.has(product.code)) {
+        try {
+          doc.image(imageMap.get(product.code), COL_IMG + 2, y + 2, {
+            width: IMG_SIZE, height: IMG_SIZE, fit: [IMG_SIZE, IMG_SIZE],
+          });
+        } catch { /* skip */ }
+      }
+
+      // Code
+      doc.fillColor('#059669').fontSize(9).font('Helvetica-Bold');
+      doc.text(`#${product.code}`, COL_DETAIL, y + 2, { width: 170, lineBreak: false });
+
+      // Description
+      doc.fillColor('#111827').fontSize(9).font('Helvetica');
+      doc.text(product.description, COL_DETAIL, y + 14, { width: 170, height: 22, ellipsis: true });
+
+      // Units per bulk
+      doc.fillColor('#9ca3af').fontSize(7).font('Helvetica');
+      doc.text(`${product.units_per_bulk} unid/bulto`, COL_DETAIL, y + 38, { width: 170, lineBreak: false });
+
+      let lineSubtotal = 0;
+
+      if (isCart) {
+        const cart = cartItems[product.code] || { units: 0, bulks: 0 };
+        const units = cart.units || 0;
+        const bulks = cart.bulks || 0;
+        const up = discount > 0 ? applyDiscount(product.unit_price, discount) : product.unit_price;
+        const bp = discount > 0 ? applyDiscount(product.bulk_price, discount) : product.bulk_price;
+
+        // Quantity
+        const qtyParts = [];
+        if (units > 0) qtyParts.push(`${units} unid.`);
+        if (bulks > 0) qtyParts.push(`${bulks} bulto${bulks > 1 ? 's' : ''}`);
+        doc.fillColor('#111827').fontSize(9).font('Helvetica');
+        doc.text(qtyParts.join('\n'), COL_QTY, y + 12, { width: 75 });
+
+        // Unit price
+        doc.fillColor('#111827').fontSize(9).font('Helvetica-Bold');
+        doc.text(formatARS(up), COL_PRICE, y + 12, { width: 95, lineBreak: false });
+        if (discount > 0) {
+          doc.fillColor('#9ca3af').fontSize(7).font('Helvetica');
+          doc.text(`(-${discount}%)`, COL_PRICE, y + 24, { width: 95, lineBreak: false });
+        }
+
+        // Subtotal
+        lineSubtotal = (units * up) + (bulks * bp);
+        doc.fillColor('#059669').fontSize(10).font('Helvetica-Bold');
+        doc.text(formatARS(lineSubtotal), COL_LAST, y + 12, { width: 95, lineBreak: false });
+
+      } else if (hasAnyDiscount) {
+        // List price
+        doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold');
+        doc.text(formatARS(product.unit_price), COL_PRICE, y + 18, { width: 100, lineBreak: false });
+
+        // Bonified price
+        if (discount > 0) {
+          const discPrice = applyDiscount(product.unit_price, discount);
+          const savings = product.unit_price - discPrice;
+          doc.fillColor('#059669').fontSize(10).font('Helvetica-Bold');
+          doc.text(formatARS(discPrice), COL_LAST, y + 15, { width: 100, lineBreak: false });
+          doc.fillColor('#9ca3af').fontSize(7).font('Helvetica');
+          doc.text(`(-${formatARS(savings)})`, COL_LAST, y + 28, { width: 100, lineBreak: false });
+        }
+      } else {
+        // Simple price
+        doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold');
+        doc.text(formatARS(product.unit_price), COL_PRICE, y + 18, { width: 100, lineBreak: false });
+      }
+
+      // Row divider
+      const ly = y + ROW_H - 4;
+      doc.moveTo(MARGIN, ly).lineTo(PAGE_W - MARGIN, ly).strokeColor('#e5e7eb').lineWidth(0.3).stroke();
+      doc.fillColor('black');
+      return lineSubtotal;
+    }
+
+    // ── Render ──
+    let y = drawTitle(30);
+    let grandTotal = 0;
+    let grandOriginal = 0;
 
     const grouped = new Map();
     for (const p of products) {
@@ -183,69 +334,91 @@ function generatePDF(products, opts = {}) {
     }
 
     for (const [supplier, items] of grouped) {
-      if (y > 770) { doc.addPage(); y = drawHeader(40); }
-
       const brandDisc = brandDiscounts[supplier] || 0;
 
-      doc.save();
-      doc.rect(tableLeft, y - 1, tableW, 14).fill('#e0e7ff');
-      doc.fillColor('#1e40af').fontSize(8).font('Helvetica-Bold');
-      const brandLabel = brandDisc > 0 ? `${supplier}  (${brandDisc}% dto.)` : supplier;
-      doc.text(brandLabel, tableLeft + 4, y + 1, { width: tableW - 8 });
-      doc.restore();
-      doc.fillColor('black');
-      y += 15;
+      if (y + 30 + 18 + ROW_H > 800) {
+        doc.addPage();
+        y = 40;
+      }
+
+      y = drawBrandHeader(supplier, brandDisc, y);
+      y = drawColumnHeaders(y);
 
       for (const product of items) {
-        if (y > 780) { doc.addPage(); y = drawHeader(40); }
-
-        if (rowIdx % 2 === 0) {
-          doc.save();
-          doc.rect(tableLeft, y - 1, tableW, ROW_H).fill('#f8f9fa');
-          doc.restore();
-          doc.fillColor('black');
+        if (y + ROW_H > 800) {
+          doc.addPage();
+          y = 40;
+          y = drawColumnHeaders(y);
         }
 
-        doc.fontSize(6.5).font('Helvetica');
         const discount = itemDiscounts[product.code] || brandDisc || 0;
+        const sub = drawProductRow(product, discount, y);
+        grandTotal += sub;
 
-        if (hasAnyDiscount) {
-          doc.text(String(product.code),      cols[0].x + 2, y, { width: cols[0].w - 4 });
-          doc.text(product.description,        cols[1].x + 2, y, { width: cols[1].w - 4, ellipsis: true });
-          doc.text(product.supplier.substring(0, 18), cols[2].x + 2, y, { width: cols[2].w - 4, ellipsis: true });
-          doc.text(formatARS(product.unit_price), cols[3].x + 2, y, { width: cols[3].w - 4 });
-          doc.text(formatARS(product.bulk_price), cols[4].x + 2, y, { width: cols[4].w - 4 });
-
-          if (discount > 0) {
-            doc.fillColor('#b45309').text(`${discount}%`, cols[5].x + 2, y, { width: cols[5].w - 4 });
-            doc.fillColor('#059669');
-            doc.text(formatARS(applyDiscount(product.unit_price, discount)), cols[6].x + 2, y, { width: cols[6].w - 4 });
-            doc.text(formatARS(applyDiscount(product.bulk_price, discount)), cols[7].x + 2, y, { width: cols[7].w - 4 });
-            doc.fillColor('black');
-          } else {
-            doc.text('-',  cols[5].x + 2, y, { width: cols[5].w - 4 });
-            doc.text('-',  cols[6].x + 2, y, { width: cols[6].w - 4 });
-            doc.text('-',  cols[7].x + 2, y, { width: cols[7].w - 4 });
-          }
-        } else {
-          doc.text(String(product.code),        cols[0].x + 2, y, { width: cols[0].w - 4 });
-          doc.text(product.description,          cols[1].x + 2, y, { width: cols[1].w - 4, ellipsis: true });
-          doc.text(product.supplier.substring(0, 22), cols[2].x + 2, y, { width: cols[2].w - 4, ellipsis: true });
-          doc.text(String(product.units_per_bulk), cols[3].x + 2, y, { width: cols[3].w - 4 });
-          doc.text(formatARS(product.unit_price), cols[4].x + 2, y, { width: cols[4].w - 4 });
-          doc.text(formatARS(product.bulk_price), cols[5].x + 2, y, { width: cols[5].w - 4 });
+        // Track original total for cart summary
+        if (isCart) {
+          const cart = cartItems[product.code] || { units: 0, bulks: 0 };
+          grandOriginal += ((cart.units || 0) * product.unit_price) + ((cart.bulks || 0) * product.bulk_price);
         }
 
         y += ROW_H;
-        rowIdx++;
       }
+
+      y += 10;
     }
 
-    const range = doc.bufferedPageRange();
-    for (let i = range.start; i < range.start + range.count; i++) {
+    // ── Cart summary ──
+    if (isCart) {
+      const SUMMARY_H = 80;
+      if (y + SUMMARY_H > 800) {
+        doc.addPage();
+        y = 40;
+      }
+
+      y += 5;
+      doc.moveTo(MARGIN, y).lineTo(PAGE_W - MARGIN, y).strokeColor('#374151').lineWidth(1).stroke();
+      y += 10;
+
+      const labelX = PAGE_W - MARGIN - 250;
+      const valueX = PAGE_W - MARGIN - 100;
+
+      if (grandOriginal !== grandTotal) {
+        // Has discounts — show original, discount, final
+        const discountAmt = grandOriginal - grandTotal;
+        doc.fillColor('#6b7280').fontSize(9).font('Helvetica');
+        doc.text('Subtotal sin descuento:', labelX, y, { width: 145, align: 'right', lineBreak: false });
+        doc.fillColor('#111827').fontSize(9).font('Helvetica');
+        doc.text(formatARS(grandOriginal), valueX, y, { width: 100, align: 'right', lineBreak: false });
+        y += 16;
+
+        doc.fillColor('#059669').fontSize(9).font('Helvetica');
+        doc.text('Descuento total:', labelX, y, { width: 145, align: 'right', lineBreak: false });
+        doc.fillColor('#059669').fontSize(9).font('Helvetica-Bold');
+        doc.text(`-${formatARS(discountAmt)}`, valueX, y, { width: 100, align: 'right', lineBreak: false });
+        y += 18;
+      }
+
+      doc.fillColor('#111827').fontSize(12).font('Helvetica-Bold');
+      doc.text('TOTAL:', labelX, y, { width: 145, align: 'right', lineBreak: false });
+      doc.fillColor('#059669').fontSize(12).font('Helvetica-Bold');
+      doc.text(formatARS(grandTotal), valueX, y, { width: 100, align: 'right', lineBreak: false });
+      y += 20;
+    }
+
+    // Footer
+    doc.fontSize(7).font('Helvetica').fillColor('#9ca3af');
+    if (y + 15 > 810) { doc.addPage(); y = 40; }
+    doc.text('* Precios con IVA incluido', PAGE_W - MARGIN - 130, y + 10, { width: 130, align: 'right', lineBreak: false });
+
+    // ── Page numbers (use _pageBuffer length to avoid doc.text creating pages) ──
+    const pageCount = doc._pageBuffer.length;
+    for (let i = 0; i < pageCount; i++) {
       doc.switchToPage(i);
-      doc.fontSize(7).font('Helvetica').fillColor('#6b7280');
-      doc.text(`Página ${i + 1} de ${range.count}`, 40, 820, { align: 'center', width: tableW });
+      const str = `Página ${i + 1} de ${pageCount}`;
+      doc.fontSize(7).font('Helvetica').fillColor('#9ca3af');
+      const strW = doc.widthOfString(str);
+      doc._root.data.Pages.data.Count = pageCount; // lock page count
+      doc.text(str, MARGIN + (CONTENT_W - strW) / 2, 820, { lineBreak: false });
     }
 
     doc.end();
@@ -420,19 +593,43 @@ export function createCatalogServer() {
   // ── 7. export_items_pdf ──────────────────────────────────────────────────
   server.tool(
     'export_items_pdf',
-    'Export a PDF containing only specific products by code/ID. Use search_products first to find codes. Returns the PDF as a downloadable file. Ask the user what filename they want before calling.',
+    'Export a PDF for specific cart items with quantities. Use search_products first to find codes. Shows quantity, unit price, subtotal per item, and grand total. Returns downloadable PDF.',
     {
-      item_codes: z.array(z.number()).describe('Product codes to include'),
-      discounts: z.record(z.string(), z.number()).optional().describe('Per-item discounts: {"<code>": pct}'),
-      filename: z.string().optional().default('productos_seleccionados.pdf').describe('Output filename — ask the user, default: productos_seleccionados.pdf'),
+      items: z.array(z.object({
+        code: z.number().describe('Product code'),
+        units: z.number().optional().default(0).describe('Individual units ordered'),
+        bulks: z.number().optional().default(0).describe('Bulk packages ordered'),
+      })).describe('Cart items with quantities'),
+      brand_discounts: z.record(z.string(), z.number()).optional().describe('Brand discounts: {"brand": pct}'),
+      item_discounts: z.record(z.string(), z.number()).optional().describe('Per-item discounts: {"<code>": pct}'),
+      filename: z.string().optional().default('presupuesto.pdf').describe('Output filename'),
     },
-    async ({ item_codes, discounts, filename }) => {
-      const products = item_codes.map((c) => catalog.products.find((p) => p.code === c)).filter(Boolean);
-      if (products.length === 0) return { content: [{ type: 'text', text: `No products found for codes: ${item_codes.join(', ')}` }] };
+    async ({ items, brand_discounts, item_discounts, filename }) => {
+      const codes = items.map(i => i.code);
+      const products = codes.map((c) => catalog.products.find((p) => p.code === c)).filter(Boolean);
+      if (products.length === 0) return { content: [{ type: 'text', text: `No products found for given codes` }] };
+
+      const resolvedBD = {};
+      if (brand_discounts) {
+        for (const [k, v] of Object.entries(brand_discounts)) {
+          const full = resolveFullBrand(k);
+          if (full) resolvedBD[full] = v;
+        }
+      }
       const itemDisc = {};
-      if (discounts) { for (const [k, v] of Object.entries(discounts)) itemDisc[Number(k)] = v; }
-      const buffer = await generatePDF(products, { title: 'Productos Seleccionados', filename, itemDiscounts: itemDisc });
-      const notFound = item_codes.filter((c) => !catalog.products.find((p) => p.code === c));
+      if (item_discounts) { for (const [k, v] of Object.entries(item_discounts)) itemDisc[Number(k)] = v; }
+
+      const cartMap = {};
+      for (const item of items) cartMap[item.code] = { units: item.units || 0, bulks: item.bulks || 0 };
+
+      const buffer = await generatePDF(products, {
+        title: 'Presupuesto',
+        filename,
+        brandDiscounts: resolvedBD,
+        itemDiscounts: itemDisc,
+        cartItems: cartMap,
+      });
+      const notFound = codes.filter((c) => !catalog.products.find((p) => p.code === c));
       let summary = `${products.length} products`;
       if (notFound.length) summary += `. Codes not found: ${notFound.join(', ')}`;
       return pdfToolResult(buffer, filename, summary);

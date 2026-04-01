@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "catalog": {
-      "command": "node",
-      "args": ["mcp-catalog/src/index.js"],
-      "description": "Marce Catalogo - B2B wholesale product catalog (local stdio). IMPORTANT: Cold start ~30-60s. Always call 'ping' first."
-    }
-  }
-}

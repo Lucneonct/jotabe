@@ -283,14 +283,18 @@ async function exportPdf() {
   let endpoint, body
 
   if (pdfHasCartItems.value) {
-    // Export specific cart items
-    const codes = cartItems.value.map(item => item.product.code)
+    // Export cart items with quantities
+    const items = cartItems.value.map(item => ({
+      code: item.product.code,
+      units: item.units || 0,
+      bulks: item.bulks || 0,
+    }))
     const itemDisc = {}
     for (const [code, pct] of Object.entries(discounts.value)) {
       if (pct > 0) itemDisc[code] = pct
     }
     endpoint = '/api/pdf/items'
-    body = { item_codes: codes, discounts: itemDisc, filename: 'presupuesto.pdf' }
+    body = { items, discounts: itemDisc, brand_discounts: brandDiscounts.value, filename: 'presupuesto.pdf' }
   } else if (hasDiscounts) {
     // Export catalog with discounts
     endpoint = '/api/pdf/discounts'
