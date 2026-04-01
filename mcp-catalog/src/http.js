@@ -14,7 +14,6 @@ import {
   resolveFullBrand,
   encodeToken,
   normalize,
-  OUTPUT_PATH,
 } from './catalog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -169,8 +168,8 @@ async function handleApi(req, res, pathname) {
     }
     if (products.length === 0) return json(res, { error: 'No matching products' }, 400);
     const filename = body.filename || 'catalogo.pdf';
-    const file = await generatePDF(products, { title: 'Catálogo de Productos', filename });
-    return streamFile(res, file, filename);
+    const buffer = await generatePDF(products, { title: 'Catálogo de Productos', filename });
+    return streamBuffer(res, buffer, filename);
   }
 
   // POST /api/pdf/discounts
@@ -186,8 +185,8 @@ async function handleApi(req, res, pathname) {
       : catalog.products.filter((p) => Object.keys(resolved).includes(p.supplier));
     if (products.length === 0) return json(res, { error: 'No matching products' }, 400);
     const filename = body.filename || 'catalogo_descuentos.pdf';
-    const file = await generatePDF(products, { title: 'Catálogo con Descuentos', filename, brandDiscounts: resolved });
-    return streamFile(res, file, filename);
+    const buffer = await generatePDF(products, { title: 'Catálogo con Descuentos', filename, brandDiscounts: resolved });
+    return streamBuffer(res, buffer, filename);
   }
 
   // POST /api/pdf/items
@@ -198,8 +197,8 @@ async function handleApi(req, res, pathname) {
     const itemDisc = {};
     if (body.discounts) { for (const [k, v] of Object.entries(body.discounts)) itemDisc[Number(k)] = v; }
     const filename = body.filename || 'productos_seleccionados.pdf';
-    const file = await generatePDF(products, { title: 'Productos Seleccionados', filename, itemDiscounts: itemDisc });
-    return streamFile(res, file, filename);
+    const buffer = await generatePDF(products, { title: 'Productos Seleccionados', filename, itemDiscounts: itemDisc });
+    return streamBuffer(res, buffer, filename);
   }
 
   // POST /api/share-url
@@ -316,15 +315,14 @@ function readBody(req) {
   });
 }
 
-function streamFile(res, filePath, filename) {
-  const stat = fs.statSync(filePath);
+function streamBuffer(res, buffer, filename) {
   res.writeHead(200, {
     'Content-Type': 'application/pdf',
     'Content-Disposition': `attachment; filename="${filename}"`,
-    'Content-Length': stat.size,
+    'Content-Length': buffer.length,
     'Access-Control-Allow-Origin': '*',
   });
-  fs.createReadStream(filePath).pipe(res);
+  res.end(buffer);
 }
 
 // ---------------------------------------------------------------------------

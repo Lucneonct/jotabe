@@ -13,9 +13,6 @@ const __dirname = path.dirname(__filename);
 
 const CATALOG_PATH = process.env.CATALOG_PATH || path.resolve(__dirname, '../../public/catalog.json');
 const IMAGES_PATH = process.env.IMAGES_PATH || path.resolve(__dirname, '../../public/images');
-const OUTPUT_PATH = process.env.OUTPUT_PATH || path.resolve(__dirname, '../output');
-
-if (!fs.existsSync(OUTPUT_PATH)) fs.mkdirSync(OUTPUT_PATH, { recursive: true });
 
 const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf-8'));
 
@@ -123,13 +120,12 @@ function generatePDF(products, opts = {}) {
     itemDiscounts = {},
   } = opts;
 
-  const outputFile = path.join(OUTPUT_PATH, filename);
   const hasAnyDiscount = Object.keys(brandDiscounts).length > 0 || Object.keys(itemDiscounts).length > 0;
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
-    const stream = fs.createWriteStream(outputFile);
-    doc.pipe(stream);
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
 
     const logoPath = path.join(IMAGES_PATH, 'logo-jotabe.png');
     const logoExists = fs.existsSync(logoPath);
@@ -253,9 +249,31 @@ function generatePDF(products, opts = {}) {
     }
 
     doc.end();
-    stream.on('finish', () => resolve(outputFile));
-    stream.on('error', reject);
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
   });
+}
+
+// ---------------------------------------------------------------------------
+// MCP tool result helper — returns PDF as embedded resource for in-chat download
+// ---------------------------------------------------------------------------
+function pdfToolResult(buffer, filename, summary) {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `PDF generated: ${filename} (${summary}, ${(buffer.length / 1024).toFixed(0)} KB)`,
+      },
+      {
+        type: 'resource',
+        resource: {
+          uri: `pdf://${filename}`,
+          mimeType: 'application/pdf',
+          blob: buffer.toString('base64'),
+        },
+      },
+    ],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -352,10 +370,10 @@ export function createCatalogServer() {
   // ── 5. export_catalog_pdf ────────────────────────────────────────────────
   server.tool(
     'export_catalog_pdf',
-    'Export the full catalog (or filtered by brands) as a PDF price list. Returns the local file path.',
+    'Export the full catalog (or filtered by brands) as a PDF price list. Returns the PDF as a downloadable file. Ask the user what filename they want before calling.',
     {
       brands: z.array(z.string()).optional().describe('Filter by brands (partial match). Omit for all.'),
-      filename: z.string().optional().default('catalogo.pdf').describe('Output filename'),
+      filename: z.string().optional().default('catalogo.pdf').describe('Output filename — ask the user, default: catalogo.pdf'),
     },
     async ({ brands, filename }) => {
       let products = catalog.products;
@@ -363,19 +381,19 @@ export function createCatalogServer() {
         products = products.filter((p) => brands.some((b) => normalize(p.supplier).includes(normalize(b))));
       }
       if (products.length === 0) return { content: [{ type: 'text', text: 'No matching products to export.' }] };
-      const file = await generatePDF(products, { title: 'Catálogo de Productos', filename });
-      return { content: [{ type: 'text', text: `PDF generated (${products.length} products).\nFile: ${file}` }] };
+      const buffer = await generatePDF(products, { title: 'Catálogo de Productos', filename });
+      return pdfToolResult(buffer, filename, `${products.length} products`);
     },
   );
 
   // ── 6. export_pdf_with_discounts ─────────────────────────────────────────
   server.tool(
     'export_pdf_with_discounts',
-    'Export a PDF showing original and discounted prices for specified brands.',
+    'Export a PDF showing original and discounted prices for specified brands. Returns the PDF as a downloadable file. Ask the user what filename they want before calling.',
     {
       brand_discounts: z.record(z.string(), z.number()).describe('Brand → discount %. E.g. {"FERRERO": 10}'),
       include_all_brands: z.boolean().optional().default(false).describe('Include brands without discounts too'),
-      filename: z.string().optional().default('catalogo_descuentos.pdf').describe('Output filename'),
+      filename: z.string().optional().default('catalogo_descuentos.pdf').describe('Output filename — ask the user, default: catalogo_descuentos.pdf'),
     },
     async ({ brand_discounts, include_all_brands, filename }) => {
       const resolved = {};
@@ -387,32 +405,30 @@ export function createCatalogServer() {
         ? catalog.products
         : catalog.products.filter((p) => Object.keys(resolved).includes(p.supplier));
       if (products.length === 0) return { content: [{ type: 'text', text: 'No products matched the specified brands.' }] };
-      const file = await generatePDF(products, { title: 'Catálogo con Descuentos', filename, brandDiscounts: resolved });
-      return {
-        content: [{ type: 'text', text: `PDF with discounts generated (${products.length} products).\nDiscounts: ${JSON.stringify(resolved)}\nFile: ${file}` }],
-      };
+      const buffer = await generatePDF(products, { title: 'Catálogo con Descuentos', filename, brandDiscounts: resolved });
+      return pdfToolResult(buffer, filename, `${products.length} products, discounts: ${JSON.stringify(resolved)}`);
     },
   );
 
   // ── 7. export_items_pdf ──────────────────────────────────────────────────
   server.tool(
     'export_items_pdf',
-    'Export a PDF containing only specific products by code/ID. Use search_products first to find codes.',
+    'Export a PDF containing only specific products by code/ID. Use search_products first to find codes. Returns the PDF as a downloadable file. Ask the user what filename they want before calling.',
     {
       item_codes: z.array(z.number()).describe('Product codes to include'),
       discounts: z.record(z.string(), z.number()).optional().describe('Per-item discounts: {"<code>": pct}'),
-      filename: z.string().optional().default('productos_seleccionados.pdf').describe('Output filename'),
+      filename: z.string().optional().default('productos_seleccionados.pdf').describe('Output filename — ask the user, default: productos_seleccionados.pdf'),
     },
     async ({ item_codes, discounts, filename }) => {
       const products = item_codes.map((c) => catalog.products.find((p) => p.code === c)).filter(Boolean);
       if (products.length === 0) return { content: [{ type: 'text', text: `No products found for codes: ${item_codes.join(', ')}` }] };
       const itemDisc = {};
       if (discounts) { for (const [k, v] of Object.entries(discounts)) itemDisc[Number(k)] = v; }
-      const file = await generatePDF(products, { title: 'Productos Seleccionados', filename, itemDiscounts: itemDisc });
+      const buffer = await generatePDF(products, { title: 'Productos Seleccionados', filename, itemDiscounts: itemDisc });
       const notFound = item_codes.filter((c) => !catalog.products.find((p) => p.code === c));
-      let msg = `PDF generated (${products.length} products).\nFile: ${file}`;
-      if (notFound.length) msg += `\nCodes not found: ${notFound.join(', ')}`;
-      return { content: [{ type: 'text', text: msg }] };
+      let summary = `${products.length} products`;
+      if (notFound.length) summary += `. Codes not found: ${notFound.join(', ')}`;
+      return pdfToolResult(buffer, filename, summary);
     },
   );
 
@@ -620,4 +636,4 @@ export function createCatalogServer() {
   return server;
 }
 
-export { catalog, smartSearch, generatePDF, formatARS, applyDiscount, resolveFullBrand, encodeToken, normalize, OUTPUT_PATH };
+export { catalog, smartSearch, generatePDF, formatARS, applyDiscount, resolveFullBrand, encodeToken, normalize };
