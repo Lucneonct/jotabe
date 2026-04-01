@@ -255,23 +255,30 @@ function generatePDF(products, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// MCP tool result helper — returns PDF as embedded resource for in-chat download
+// PDF store bridge — http.js injects the store function at startup
 // ---------------------------------------------------------------------------
+let _storePdf = null;
+function setPdfStore(fn) { _storePdf = fn; }
+
 function pdfToolResult(buffer, filename, summary) {
+  const baseUrl = (process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, '');
+
+  if (_storePdf) {
+    const id = _storePdf(buffer, filename);
+    const url = `${baseUrl}/api/pdf/download/${id}`;
+    return {
+      content: [{
+        type: 'text',
+        text: `PDF generated: **${filename}** (${summary}, ${(buffer.length / 1024).toFixed(0)} KB)\n\nDownload: ${url}\n\n_Link expires in 5 minutes._`,
+      }],
+    };
+  }
+
+  // Fallback for stdio mode (no http server) — return embedded resource
   return {
     content: [
-      {
-        type: 'text',
-        text: `PDF generated: ${filename} (${summary}, ${(buffer.length / 1024).toFixed(0)} KB)`,
-      },
-      {
-        type: 'resource',
-        resource: {
-          uri: `pdf://${filename}`,
-          mimeType: 'application/pdf',
-          blob: buffer.toString('base64'),
-        },
-      },
+      { type: 'text', text: `PDF generated: ${filename} (${summary}, ${(buffer.length / 1024).toFixed(0)} KB)` },
+      { type: 'resource', resource: { uri: `pdf://${filename}`, mimeType: 'application/pdf', blob: buffer.toString('base64') } },
     ],
   };
 }
@@ -636,4 +643,4 @@ export function createCatalogServer() {
   return server;
 }
 
-export { catalog, smartSearch, generatePDF, formatARS, applyDiscount, resolveFullBrand, encodeToken, normalize };
+export { catalog, smartSearch, generatePDF, formatARS, applyDiscount, resolveFullBrand, encodeToken, normalize, setPdfStore };

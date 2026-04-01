@@ -22,6 +22,26 @@ const DIST_DIR = path.resolve(__dirname, '../../dist');
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 
 // ---------------------------------------------------------------------------
+// Temporary in-memory PDF store (auto-expires after 5 minutes)
+// ---------------------------------------------------------------------------
+const pdfStore = new Map(); // id → { buffer, filename, expires }
+const PDF_TTL = 5 * 60 * 1000;
+
+function storePdf(buffer, filename) {
+  const id = randomUUID();
+  pdfStore.set(id, { buffer, filename, expires: Date.now() + PDF_TTL });
+  // Clean up expired entries
+  for (const [k, v] of pdfStore) {
+    if (v.expires < Date.now()) pdfStore.delete(k);
+  }
+  return id;
+}
+
+// Make storePdf available to MCP tools
+import { setPdfStore } from './catalog.js';
+setPdfStore(storePdf);
+
+// ---------------------------------------------------------------------------
 // MCP session management
 // ---------------------------------------------------------------------------
 const sessions = new Map(); // sessionId → { transport, server }
@@ -263,6 +283,17 @@ async function handleApi(req, res, pathname) {
       };
     });
     return json(res, { lines, grand_total: grandTotal, formatted_total: formatARS(grandTotal) });
+  }
+
+  // GET /api/pdf/download/:id — serve a temporary PDF from memory
+  if (pathname.startsWith('/api/pdf/download/') && req.method === 'GET') {
+    const id = pathname.slice('/api/pdf/download/'.length);
+    const entry = pdfStore.get(id);
+    if (!entry || entry.expires < Date.now()) {
+      pdfStore.delete(id);
+      return json(res, { error: 'PDF expired or not found. Generate a new one.' }, 404);
+    }
+    return streamBuffer(res, entry.buffer, entry.filename);
   }
 
   // Not found
