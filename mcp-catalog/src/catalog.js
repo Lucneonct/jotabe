@@ -776,12 +776,12 @@ export function createCatalogServer() {
   // ── 12. generate_custom_page ─────────────────────────────────────────────
   server.tool(
     'generate_custom_page',
-    'Generate a custom catalog page URL. Can filter to specific brands/products and apply discounts. The recipient sees only what you include.',
+    'Generate a custom catalog page URL. Use "brands" to FILTER which brands are visible. Use "brand_discounts" ONLY for discount percentages > 0. To show a brand without discount, put it in "brands" but NOT in "brand_discounts".',
     {
-      brands: z.array(z.string()).optional().describe('Only show these brands (partial match). Omit to show all.'),
-      product_codes: z.array(z.number()).optional().describe('Only show these product codes. Omit to show all.'),
-      brand_discounts: z.record(z.string(), z.number()).optional().describe('Brand discounts: {"brand": pct}'),
-      item_discounts: z.record(z.string(), z.number()).optional().describe('Per-product discounts: {"code": pct}'),
+      brands: z.array(z.string()).optional().describe('FILTER: only show these brands in the catalog (partial match). Use this to restrict visible brands. Omit to show all brands.'),
+      product_codes: z.array(z.number()).optional().describe('FILTER: only show these product codes. Omit to show all products.'),
+      brand_discounts: z.record(z.string(), z.number()).optional().describe('DISCOUNTS only (pct > 0). Do NOT use this to filter brands — use "brands" param instead. E.g. {"FERRERO": 10}'),
+      item_discounts: z.record(z.string(), z.number()).optional().describe('Per-product discounts (pct > 0): {"<code>": pct}'),
       editor_mode: z.boolean().optional().default(false).describe('If true, recipient can edit discounts'),
       base_url: z.string().optional().default('https://jotabe.onrender.com').describe('Base URL of the catalog app'),
     },

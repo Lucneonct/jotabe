@@ -516,10 +516,6 @@ const groupedBySupplier = computed(() => {
   return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
 })
 
-const offersProducts = computed(() => {
-  return productsWithImages.value.filter(p => getDiscount(p.code) > 0)
-})
-
 const hasAnyDiscount = computed(() => {
   return Object.keys(brandDiscounts.value).length > 0 || Object.keys(discounts.value).length > 0
 })
@@ -731,43 +727,6 @@ onMounted(() => {
         <p>No se encontraron productos</p>
         <button class="clear-filters-btn" @click="clearFilters">Limpiar filtros</button>
       </div>
-
-      <!-- Offers section -->
-      <template v-if="hasAnyDiscount && offersProducts.length > 0">
-        <h2 class="supplier-title offers-title">Ofertas</h2>
-        <div class="product-grid">
-          <div
-            class="product-card offer-card"
-            v-for="product in offersProducts"
-            :key="'offer-' + product.code"
-            @click="openProduct(product)"
-          >
-            <div class="card-image">
-              <img
-                :src="`${base}images/` + product.images[0]"
-                :alt="product.description"
-                loading="lazy"
-              />
-            </div>
-            <div class="card-info">
-              <span class="card-code">#{{ product.code }}</span>
-              <p class="card-name">{{ product.description }}</p>
-              <p class="card-price" v-if="product.unit_price">
-                <span class="card-price-old">{{ formatPrice(product.unit_price) }}</span>
-                {{ formatPrice(product.unit_price * (1 - getDiscount(product.code) / 100)) }}
-                <span class="price-label">/ unidad</span>
-              </p>
-              <p class="card-price no-price" v-else>Consultar precio</p>
-            </div>
-            <div class="card-cart-badge" v-if="getCartItem(product.code)">
-              {{ getCartItem(product.code).units + getCartItem(product.code).bulks }}
-            </div>
-            <div class="card-discount-badge">
-              -{{ getDiscount(product.code) }}%
-            </div>
-          </div>
-        </div>
-      </template>
 
       <template v-for="[supplier, products] in groupedBySupplier" :key="supplier">
         <h2 class="supplier-title">
@@ -2495,20 +2454,6 @@ body {
   font-size: 12px;
   color: #92400e;
   font-style: italic;
-}
-
-/* ── Offers section ── */
-.offers-title {
-  color: #b45309 !important;
-  border-bottom-color: #f59e0b !important;
-}
-
-.offers-title::before {
-  content: '\2605 ';
-}
-
-.offer-card {
-  border: 2px solid #fde68a;
 }
 
 .card-price-old {
