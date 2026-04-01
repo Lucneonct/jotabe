@@ -42,6 +42,8 @@ const showDiscountPanel = ref(false)
 const discounts = ref({}) // { [code]: percentage }
 const expandedModalImg = ref(false)
 const brandDiscounts = ref({})
+const urlBrandFilter = ref(null) // array of supplier names from URL, null = show all
+const urlProductFilter = ref(null) // array of product codes from URL, null = show all
 const isEditor = ref(false)
 const editorBrandSelect = ref('')
 const editorBrandPct = ref(10)
@@ -182,6 +184,16 @@ function parseUrlDiscounts() {
       if (pct > 0) discounts.value[code] = pct
     }
   }
+
+  // Brand filter: only show these brands
+  if (payload.b && Array.isArray(payload.b)) {
+    urlBrandFilter.value = payload.b.map(idx => cats[Number(idx)]).filter(Boolean)
+  }
+
+  // Product filter: only show these product codes
+  if (payload.p && Array.isArray(payload.p)) {
+    urlProductFilter.value = payload.p.map(Number)
+  }
 }
 
 function generateShareUrl() {
@@ -203,6 +215,16 @@ function generateShareUrl() {
     if (pct > 0) d[code] = pct
   }
   if (Object.keys(d).length) payload.d = d
+
+  // Brand filter
+  if (urlBrandFilter.value && urlBrandFilter.value.length > 0) {
+    payload.b = urlBrandFilter.value.map(s => cats.indexOf(s)).filter(i => i >= 0)
+  }
+
+  // Product filter
+  if (urlProductFilter.value && urlProductFilter.value.length > 0) {
+    payload.p = urlProductFilter.value
+  }
 
   if (Object.keys(payload).length) {
     url.searchParams.set('t', encodeToken(payload))
@@ -443,8 +465,26 @@ const productsWithImages = computed(() =>
   catalog.value.products.filter(p => p.images && p.images.length > 0)
 )
 
+const visibleCategories = computed(() => {
+  if (urlBrandFilter.value && urlBrandFilter.value.length > 0) {
+    return catalog.value.categories.filter(c => urlBrandFilter.value.includes(c))
+  }
+  return catalog.value.categories
+})
+
 const filteredProducts = computed(() => {
   let list = productsWithImages.value
+
+  // URL-based brand filter (only show these brands)
+  if (urlBrandFilter.value && urlBrandFilter.value.length > 0) {
+    list = list.filter(p => urlBrandFilter.value.includes(p.supplier))
+  }
+
+  // URL-based product filter (only show these product codes)
+  if (urlProductFilter.value && urlProductFilter.value.length > 0) {
+    list = list.filter(p => urlProductFilter.value.includes(p.code))
+  }
+
   if (selectedCategory.value) {
     list = list.filter(p => p.supplier === selectedCategory.value)
   }
@@ -622,7 +662,7 @@ onMounted(() => {
         <button
           class="cat-chip"
           :class="{ active: selectedCategory === cat }"
-          v-for="cat in catalog.categories"
+          v-for="cat in visibleCategories"
           :key="cat"
           @click="selectCategory(cat)"
         >{{ cat }}</button>

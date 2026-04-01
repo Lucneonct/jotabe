@@ -776,16 +776,38 @@ export function createCatalogServer() {
   // ── 12. generate_custom_page ─────────────────────────────────────────────
   server.tool(
     'generate_custom_page',
-    'Generate a custom catalog page URL with discounts pre-applied. Works like the web editor.',
+    'Generate a custom catalog page URL. Can filter to specific brands/products and apply discounts. The recipient sees only what you include.',
     {
+      brands: z.array(z.string()).optional().describe('Only show these brands (partial match). Omit to show all.'),
+      product_codes: z.array(z.number()).optional().describe('Only show these product codes. Omit to show all.'),
       brand_discounts: z.record(z.string(), z.number()).optional().describe('Brand discounts: {"brand": pct}'),
       item_discounts: z.record(z.string(), z.number()).optional().describe('Per-product discounts: {"code": pct}'),
       editor_mode: z.boolean().optional().default(false).describe('If true, recipient can edit discounts'),
       base_url: z.string().optional().default('https://jotabe.onrender.com').describe('Base URL of the catalog app'),
     },
-    async ({ brand_discounts, item_discounts, editor_mode, base_url }) => {
+    async ({ brands, product_codes, brand_discounts, item_discounts, editor_mode, base_url }) => {
       const payload = {};
 
+      // Brand filter
+      if (brands && brands.length > 0) {
+        const indices = [];
+        for (const input of brands) {
+          const full = resolveFullBrand(input);
+          if (full) {
+            const idx = catalog.categories.indexOf(full);
+            if (idx >= 0) indices.push(idx);
+          }
+        }
+        if (indices.length) payload.b = indices;
+      }
+
+      // Product filter
+      if (product_codes && product_codes.length > 0) {
+        const valid = product_codes.filter(c => catalog.products.some(p => p.code === c));
+        if (valid.length) payload.p = valid;
+      }
+
+      // Brand discounts
       if (brand_discounts && Object.keys(brand_discounts).length > 0) {
         const bd = {};
         for (const [input, pct] of Object.entries(brand_discounts)) {
@@ -798,6 +820,7 @@ export function createCatalogServer() {
         if (Object.keys(bd).length) payload.bd = bd;
       }
 
+      // Item discounts
       if (item_discounts && Object.keys(item_discounts).length > 0) {
         const d = {};
         for (const [code, pct] of Object.entries(item_discounts)) {
@@ -811,6 +834,13 @@ export function createCatalogServer() {
       if (editor_mode) url.searchParams.set('editor', '');
 
       const summary = [];
+      if (payload.b) {
+        summary.push(`Brands shown: ${payload.b.map(i => catalog.categories[i]).join(', ')}`);
+      }
+      if (payload.p) {
+        const names = payload.p.map(c => { const p = catalog.products.find(x => x.code === c); return p ? `[${c}] ${p.description}` : `[${c}]`; });
+        summary.push(`Products shown: ${names.join(', ')}`);
+      }
       if (payload.bd) {
         for (const [idx, pct] of Object.entries(payload.bd))
           summary.push(`${catalog.categories[Number(idx)]}: ${pct}% off`);
@@ -830,7 +860,7 @@ export function createCatalogServer() {
             url.toString(),
             ``,
             `Mode: ${editor_mode ? 'Editor (can modify discounts)' : 'Read-only (discounts locked)'}`,
-            summary.length ? `\nDiscounts encoded:\n${summary.map((s) => '  • ' + s).join('\n')}` : 'No discounts applied.',
+            summary.length ? `\n${summary.map((s) => '  • ' + s).join('\n')}` : 'Full catalog, no filters or discounts.',
           ].join('\n'),
         }],
       };

@@ -270,6 +270,22 @@ async function handleApi(req, res, pathname) {
       if (Object.keys(d).length) payload.d = d;
     }
 
+    // Brand filter
+    if (body.brands && body.brands.length > 0) {
+      const indices = [];
+      for (const input of body.brands) {
+        const full = resolveFullBrand(input);
+        if (full) { const idx = catalog.categories.indexOf(full); if (idx >= 0) indices.push(idx); }
+      }
+      if (indices.length) payload.b = indices;
+    }
+
+    // Product filter
+    if (body.product_codes && body.product_codes.length > 0) {
+      const valid = body.product_codes.filter(c => catalog.products.some(p => p.code === c));
+      if (valid.length) payload.p = valid;
+    }
+
     const baseUrl = body.base_url || `https://${req.headers.host}`;
     const url = new URL(baseUrl);
     if (Object.keys(payload).length) url.searchParams.set('t', encodeToken(payload));
