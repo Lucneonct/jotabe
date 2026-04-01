@@ -5,7 +5,7 @@ B2B wholesale product catalog for "Marce Catalogo" (Argentine distributor). Sing
 
 ## Tech stack
 - **Frontend**: Vue 3 (Composition API, single `App.vue` component), Vite 8
-- **Deployment**: GitHub Pages at `/jotabe/` path via GitHub Actions (push to `master`)
+- **Deployment**: Render.com (root path `/`)
 - **Data**: Static `catalog.json` + WebP images in `public/`
 
 ## Commands
@@ -37,5 +37,5 @@ B2B wholesale product catalog for "Marce Catalogo" (Argentine distributor). Sing
 - Prices in Argentine Pesos (ARS), formatted with `Intl.NumberFormat('es-AR')`
 - All UI text in Spanish
 - Color scheme: blue (#2563eb) primary, green (#059669) prices, amber (#f59e0b) discounts
-- Base path is `/jotabe/` (configured in `vite.config.js`)
+- Base path is `/` (configured in `vite.config.js`)
 - Product images are lazy-loaded WebP files named `{code}_{index}.webp`

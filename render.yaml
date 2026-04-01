@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: jotabe
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build && cd mcp-catalog && npm install
+    startCommand: node mcp-catalog/src/http.js
+    branch: master
+    envVars:
+      - key: NODE_ENV
+        value: production

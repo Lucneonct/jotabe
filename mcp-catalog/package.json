@@ -1,0 +1,16 @@
+{
+  "name": "mcp-catalog",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server for Marce Catálogo - B2B wholesale product catalog",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:http": "node src/http.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "pdfkit": "^0.18.0",
+    "zod": "^3.24.4"
+  }
+}

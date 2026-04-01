@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-const html2pdfModule = () => import('html2pdf.js')
 
 const TOKEN_SALT = 'No-es-un-secret-real-al-final-yo-cargo-los-pedidos-a-mano'
 
@@ -212,19 +211,38 @@ function generateShareUrl() {
   return url.toString()
 }
 
-function copyShareUrl() {
-  const url = generateShareUrl()
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url)
-  } else {
-    const ta = document.createElement('textarea')
-    ta.value = url
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
+async function copyShareUrl() {
+  try {
+    const res = await fetch('/api/share-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brand_discounts: brandDiscounts.value,
+        item_discounts: discounts.value,
+        base_url: window.location.href.split('?')[0],
+      }),
+    })
+    const data = await res.json()
+    const url = data.url
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+  } catch (e) {
+    // Fallback to local generation if API unavailable
+    const url = generateShareUrl()
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url)
+    }
   }
   shareTooltip.value = true
   setTimeout(() => shareTooltip.value = false, 2000)
@@ -253,29 +271,58 @@ function togglePdfSelectAll() {
   }
 }
 
-function exportPdf() {
+async function exportPdf() {
   showPdfModal.value = false
-  showPdfPreview.value = true
-  nextTick(() => {
-    const imgs = document.querySelectorAll('.pdf-content img')
-    const loads = Array.from(imgs).map(img =>
-      img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r })
-    )
-    Promise.all(loads).then(async () => {
-      const { default: html2pdf } = await html2pdfModule()
-      const el = document.querySelector('.pdf-content')
-      html2pdf().set({
-        margin: [10, 10, 10, 10],
-        filename: pdfHasCartItems.value ? 'presupuesto.pdf' : 'catalogo.pdf',
-        image: { type: 'jpeg', quality: 0.92 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      }).from(el).save().then(() => {
-        showPdfPreview.value = false
-      })
+
+  const selectedBrands = Object.entries(pdfBrands.value)
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+
+  const hasDiscounts = Object.keys(brandDiscounts.value).length > 0 || Object.keys(discounts.value).length > 0
+
+  let endpoint, body
+
+  if (pdfHasCartItems.value) {
+    // Export specific cart items
+    const codes = cartItems.value.map(item => item.product.code)
+    const itemDisc = {}
+    for (const [code, pct] of Object.entries(discounts.value)) {
+      if (pct > 0) itemDisc[code] = pct
+    }
+    endpoint = '/api/pdf/items'
+    body = { item_codes: codes, discounts: itemDisc, filename: 'presupuesto.pdf' }
+  } else if (hasDiscounts) {
+    // Export catalog with discounts
+    endpoint = '/api/pdf/discounts'
+    body = {
+      brand_discounts: brandDiscounts.value,
+      include_all_brands: true,
+      filename: 'catalogo_descuentos.pdf',
+    }
+  } else {
+    // Export full catalog filtered by selected brands
+    endpoint = '/api/pdf/catalog'
+    body = { brands: selectedBrands, filename: 'catalogo.pdf' }
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     })
-  })
+    if (!res.ok) throw new Error('PDF generation failed')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = body.filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error('PDF export error:', e)
+    alert('Error al generar el PDF. Intentá de nuevo.')
+  }
 }
 
 // ── Cart persistence ──
