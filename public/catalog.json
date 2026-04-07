@@ -13,11 +13,13 @@
     "CASA PIRQUE  S.A.",
     "CIA.INTRO. DE BS. AS. SA.",
     "COSMOPOLITAN S.A.",
+    "DELCAFOOD S.R.L.",
     "ESTABLECIMIENTO HUMBERTO CANALE S A",
     "FERRERO ARGENTINA S.A.",
     "FINCA 1948 S.A.",
     "FINCA FLICHMAN S.A.",
     "FRATELLI BRANCA DEST. SA.",
+    "K BIN S.A. (HUENTALA)",
     "KIMBERLY CLARK ARGENTINA S.A.",
     "LA CUMBRE SAN LUIS S.A.",
     "LA DELICIA FELIPE FORT S.A.",
@@ -43,8 +45,8 @@
       "code": 1,
       "description": "ACEITE NATURA 15X900",
       "units_per_bulk": 15,
-      "bulk_price": 67678.52,
-      "unit_price": 4511.9,
+      "bulk_price": 71062.44,
+      "unit_price": 4737.5,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "1_0.webp"
@@ -54,8 +56,8 @@
       "code": 2,
       "description": "ACEITE NATURA 12X1500",
       "units_per_bulk": 12,
-      "bulk_price": 85724.31,
-      "unit_price": 7143.69,
+      "bulk_price": 90010.52,
+      "unit_price": 7500.88,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "2_0.webp"
@@ -65,8 +67,8 @@
       "code": 3,
       "description": "ACEITE NATURA 6X3000",
       "units_per_bulk": 6,
-      "bulk_price": 84007.62,
-      "unit_price": 14001.27,
+      "bulk_price": 88208.0,
+      "unit_price": 14701.33,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "3_0.webp"
@@ -76,8 +78,8 @@
       "code": 4,
       "description": "ACEITE NATURA 4X5000",
       "units_per_bulk": 4,
-      "bulk_price": 93341.79,
-      "unit_price": 23335.45,
+      "bulk_price": 98008.89,
+      "unit_price": 24502.22,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "4_0.webp"
@@ -98,8 +100,8 @@
       "code": 20,
       "description": "ROCIO VEGETAL NATURA 12X120",
       "units_per_bulk": 12,
-      "bulk_price": 39621.35,
-      "unit_price": 3301.78,
+      "bulk_price": 42394.84,
+      "unit_price": 3532.9,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "20_0.webp"
@@ -120,8 +122,8 @@
       "code": 306,
       "description": "ACEITE COPISI GIRASOL OLIVA 12X900",
       "units_per_bulk": 12,
-      "bulk_price": 49736.37,
-      "unit_price": 4144.7,
+      "bulk_price": 52223.18,
+      "unit_price": 4351.93,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "306_0.webp",
@@ -143,8 +145,8 @@
       "code": 435,
       "description": "ROCIO VEGETAL MAZOLA 12X120",
       "units_per_bulk": 12,
-      "bulk_price": 45072.88,
-      "unit_price": 3756.07,
+      "bulk_price": 48227.98,
+      "unit_price": 4019.0,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "435_0.webp"
@@ -154,8 +156,8 @@
       "code": 443,
       "description": "ROCIO VEGETAL MAZOLA MANTECA 12X120",
       "units_per_bulk": 12,
-      "bulk_price": 45072.88,
-      "unit_price": 3756.07,
+      "bulk_price": 48227.98,
+      "unit_price": 4019.0,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "443_0.webp"
@@ -165,8 +167,8 @@
       "code": 475,
       "description": "ACEITE NATURA BLEND 15X900 GIR-OLIVA",
       "units_per_bulk": 15,
-      "bulk_price": 69420.05,
-      "unit_price": 4628.0,
+      "bulk_price": 72891.05,
+      "unit_price": 4859.4,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "475_0.webp"
@@ -176,8 +178,8 @@
       "code": 476,
       "description": "ACEITE NATURA BLEND 12X1500 GIR-OLIVA",
       "units_per_bulk": 12,
-      "bulk_price": 90226.09,
-      "unit_price": 7518.84,
+      "bulk_price": 94737.39,
+      "unit_price": 7894.78,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "306_0.webp",
@@ -188,8 +190,8 @@
       "code": 773,
       "description": "ACEITE NATURA BLEND 12X500 GIR-OLIVA",
       "units_per_bulk": 12,
-      "bulk_price": 33470.66,
-      "unit_price": 2789.22,
+      "bulk_price": 35144.19,
+      "unit_price": 2928.68,
       "supplier": "ACEITERA GRAL. DEHEZA SA",
       "images": [
         "773_0.webp"
@@ -5732,8 +5734,8 @@
       "code": 111,
       "description": "V.LUIGI BOSCA CAB.SAUV. 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 76293.36,
-      "unit_price": 12715.56,
+      "bulk_price": 130347.24,
+      "unit_price": 21724.54,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "111_0.webp"
@@ -5743,8 +5745,8 @@
       "code": 112,
       "description": "V.LUIGI BOSCA MALBEC 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 76293.36,
-      "unit_price": 12715.56,
+      "bulk_price": 80926.34,
+      "unit_price": 13487.72,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "112_0.webp"
@@ -5754,8 +5756,8 @@
       "code": 114,
       "description": "V.FINCA L/LINDA MALBEC 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 46949.76,
-      "unit_price": 7824.96,
+      "bulk_price": 49266.42,
+      "unit_price": 8211.07,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "114_0.webp"
@@ -5765,8 +5767,8 @@
       "code": 115,
       "description": "V.FINCA L/LINDA ROSE DE MALBEC 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 46949.76,
-      "unit_price": 7824.96,
+      "bulk_price": 49266.42,
+      "unit_price": 8211.07,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "115_0.webp"
@@ -5776,8 +5778,8 @@
       "code": 116,
       "description": "V.FINCA L/LINDA CHARD.6X750",
       "units_per_bulk": 6,
-      "bulk_price": 46949.76,
-      "unit_price": 7824.96,
+      "bulk_price": 49266.42,
+      "unit_price": 8211.07,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "116_0.webp"
@@ -5787,8 +5789,8 @@
       "code": 219,
       "description": "V.LUIGI B. BCO DULCE NAT GEWURZT 6X500",
       "units_per_bulk": 6,
-      "bulk_price": 135289.44,
-      "unit_price": 22548.24,
+      "bulk_price": 146995.43,
+      "unit_price": 24499.24,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "219_0.webp"
@@ -5798,8 +5800,8 @@
       "code": 235,
       "description": "CHAMP.LUIGI BOSCA B/NAT. 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 117374.4,
-      "unit_price": 19562.4,
+      "bulk_price": 124169.86,
+      "unit_price": 20694.98,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "235_0.webp"
@@ -5809,8 +5811,8 @@
       "code": 378,
       "description": "V.LUIGI B. DE SANGRE CORTE RED BLEND 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 90810.72,
-      "unit_price": 15135.12,
+      "bulk_price": 98223.87,
+      "unit_price": 16370.65,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "378_0.webp"
@@ -5820,8 +5822,8 @@
       "code": 489,
       "description": "V.LUIGI BOSCA SAUV.BLANC 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 76293.36,
-      "unit_price": 12715.56,
+      "bulk_price": 80926.34,
+      "unit_price": 13487.72,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "489_0.webp"
@@ -5831,8 +5833,8 @@
       "code": 624,
       "description": "V.FINCA L/LINDA TORRENTES 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 46949.76,
-      "unit_price": 7824.96,
+      "bulk_price": 49266.42,
+      "unit_price": 8211.07,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "624_0.webp"
@@ -5842,8 +5844,8 @@
       "code": 691,
       "description": "V.FINCA L/LINDA SWEET 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 46949.76,
-      "unit_price": 7824.96,
+      "bulk_price": 49266.42,
+      "unit_price": 8211.07,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "691_0.webp"
@@ -5864,8 +5866,8 @@
       "code": 852,
       "description": "V.LUIGI BOSCA CHARDONAY 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 76293.36,
-      "unit_price": 12715.56,
+      "bulk_price": 80926.34,
+      "unit_price": 13487.72,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "852_0.webp"
@@ -5875,8 +5877,8 @@
       "code": 1063,
       "description": "V.LUIGI B. DE SANGRE WHITE BLEND6X750",
       "units_per_bulk": 6,
-      "bulk_price": 94208.4,
-      "unit_price": 15701.4,
+      "bulk_price": 100694.95,
+      "unit_price": 16782.49,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1063_0.webp"
@@ -5886,8 +5888,8 @@
       "code": 1064,
       "description": "V.LUIGI B. DE SANGRE CAB/FRANC 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 120463.2,
-      "unit_price": 20077.2,
+      "bulk_price": 130347.24,
+      "unit_price": 21724.54,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1064_0.webp"
@@ -5897,8 +5899,8 @@
       "code": 1065,
       "description": "V.LUIGI B. DE SANGRE MALB. V.UCO6X750",
       "units_per_bulk": 6,
-      "bulk_price": 94208.4,
-      "unit_price": 15701.4,
+      "bulk_price": 100694.95,
+      "unit_price": 16782.49,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": []
     },
@@ -5906,8 +5908,8 @@
       "code": 1066,
       "description": "V.LUIGI B. DE SANGRE MALBEC DOC 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 122316.48,
-      "unit_price": 20386.08,
+      "bulk_price": 130347.24,
+      "unit_price": 21724.54,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1066_0.webp"
@@ -5917,8 +5919,8 @@
       "code": 1173,
       "description": "CHAMP.LUIGI BOSCA E/B.6X750",
       "units_per_bulk": 6,
-      "bulk_price": 107490.24,
-      "unit_price": 17915.04,
+      "bulk_price": 113667.63,
+      "unit_price": 18944.6,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1173_0.webp"
@@ -5928,8 +5930,8 @@
       "code": 1209,
       "description": "V.LUIGI BOSCA RIESLING BLANCO 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 160617.6,
-      "unit_price": 26769.6,
+      "bulk_price": 164736.0,
+      "unit_price": 27456.0,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1209_0.webp"
@@ -5939,8 +5941,8 @@
       "code": 1393,
       "description": "CHAMP.FINCA L/LINDA E/B 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 52818.48,
-      "unit_price": 8803.08,
+      "bulk_price": 59305.2,
+      "unit_price": 9884.2,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1393_0.webp"
@@ -5961,8 +5963,8 @@
       "code": 1474,
       "description": "V.FINCA L/LINDA RED BLEND 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 46949.76,
-      "unit_price": 7824.96,
+      "bulk_price": 49266.42,
+      "unit_price": 8211.07,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "1474_0.webp"
@@ -5972,8 +5974,8 @@
       "code": 2144,
       "description": "V.LUIGI B. DE SANGRE CAB/SAUV 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 122316.48,
-      "unit_price": 20386.08,
+      "bulk_price": 130347.24,
+      "unit_price": 21724.54,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2144_0.webp"
@@ -5983,8 +5985,8 @@
       "code": 2576,
       "description": "V.LUIGI BOSCA EMBLEMA PINOT 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 92046.24,
-      "unit_price": 15341.04,
+      "bulk_price": 97605.95,
+      "unit_price": 16267.66,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2576_0.webp"
@@ -5994,8 +5996,8 @@
       "code": 2577,
       "description": "V.LUIGI BOSCA ROSE DISEÑO 2024 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 121080.96,
-      "unit_price": 20180.16,
+      "bulk_price": 128494.09,
+      "unit_price": 21415.68,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2577_0.webp"
@@ -6005,8 +6007,8 @@
       "code": 2669,
       "description": "V.LB.APUNTES C/S V. DE CANOTA 4X750",
       "units_per_bulk": 4,
-      "bulk_price": 106022.4,
-      "unit_price": 26505.6,
+      "bulk_price": 112358.55,
+      "unit_price": 28089.64,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2671_0.webp",
@@ -6017,8 +6019,8 @@
       "code": 2670,
       "description": "V.L.B APUNTES MALBEC ORG. 4X750",
       "units_per_bulk": 4,
-      "bulk_price": 106022.4,
-      "unit_price": 26505.6,
+      "bulk_price": 112358.55,
+      "unit_price": 28089.64,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2671_0.webp",
@@ -6029,8 +6031,8 @@
       "code": 2671,
       "description": "V.LB.APUNTES NARANJO FRESCO 4X750",
       "units_per_bulk": 4,
-      "bulk_price": 106022.4,
-      "unit_price": 26505.6,
+      "bulk_price": 112358.55,
+      "unit_price": 28089.64,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2671_0.webp",
@@ -6041,8 +6043,8 @@
       "code": 2852,
       "description": "V.LB.APUNTES C/S PARAJE DE ALTAMIRA 4X750",
       "units_per_bulk": 4,
-      "bulk_price": 106022.4,
-      "unit_price": 26505.6,
+      "bulk_price": 112358.55,
+      "unit_price": 28089.64,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2852_0.webp"
@@ -6052,8 +6054,8 @@
       "code": 2853,
       "description": "V.FINCA L/LINDA MALBEC ORGÁNICO 6X750",
       "units_per_bulk": 6,
-      "bulk_price": 66100.32,
-      "unit_price": 11016.72,
+      "bulk_price": 69343.37,
+      "unit_price": 11557.23,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2853_0.webp"
@@ -6063,8 +6065,8 @@
       "code": 2877,
       "description": "V. LUIGI BOSCA PARAISO EST. 4X750",
       "units_per_bulk": 1,
-      "bulk_price": 355872.0,
-      "unit_price": 355872.0,
+      "bulk_price": 419231.78,
+      "unit_price": 419231.78,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": []
     },
@@ -6072,8 +6074,8 @@
       "code": 2878,
       "description": "LUIGI BOSCA JUANA ROSSO",
       "units_per_bulk": 6,
-      "bulk_price": 137491.2,
-      "unit_price": 22915.2,
+      "bulk_price": 137491.45,
+      "unit_price": 22915.24,
       "supplier": "LEONCIO ARIZU S.A.A.I.C.",
       "images": [
         "2878_0.webp"
@@ -6083,8 +6085,8 @@
       "code": 12,
       "description": "MAYONESA NATURA SOBRE 192X8 CC",
       "units_per_bulk": 1,
-      "bulk_price": 17717.43,
-      "unit_price": 17717.43,
+      "bulk_price": 18957.73,
+      "unit_price": 18957.73,
       "supplier": "NIZA S.A.",
       "images": [
         "12_0.webp"
@@ -6094,8 +6096,8 @@
       "code": 13,
       "description": "MAYONESA NATURA DP. 20X125 GRS",
       "units_per_bulk": 1,
-      "bulk_price": 15102.15,
-      "unit_price": 15102.15,
+      "bulk_price": 16159.31,
+      "unit_price": 16159.31,
       "supplier": "NIZA S.A.",
       "images": [
         "13_0.webp"
@@ -6105,8 +6107,8 @@
       "code": 14,
       "description": "MAYONESA NATURA DP. 4X2900 GRS",
       "units_per_bulk": 4,
-      "bulk_price": 68192.24,
-      "unit_price": 17048.06,
+      "bulk_price": 72965.69,
+      "unit_price": 18241.42,
       "supplier": "NIZA S.A.",
       "images": [
         "14_0.webp"
@@ -6116,8 +6118,8 @@
       "code": 15,
       "description": "MAYONESA NATURA DP. 8X1000 GRS",
       "units_per_bulk": 8,
-      "bulk_price": 45724.61,
-      "unit_price": 5715.58,
+      "bulk_price": 48925.33,
+      "unit_price": 6115.67,
       "supplier": "NIZA S.A.",
       "images": [
         "15_0.webp"
@@ -6127,8 +6129,8 @@
       "code": 16,
       "description": "MAYONESA NATURA DP. 12X250 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 17510.35,
-      "unit_price": 1459.2,
+      "bulk_price": 18736.08,
+      "unit_price": 1561.34,
       "supplier": "NIZA S.A.",
       "images": [
         "16_0.webp"
@@ -6138,8 +6140,8 @@
       "code": 17,
       "description": "MAYONESA NATURA DP. 12X500 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 34981.69,
-      "unit_price": 2915.14,
+      "bulk_price": 37430.42,
+      "unit_price": 3119.2,
       "supplier": "NIZA S.A.",
       "images": [
         "17_0.webp"
@@ -6149,8 +6151,8 @@
       "code": 18,
       "description": "MAYONESA MAYOLIVA DP. 12X250 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 26787.04,
-      "unit_price": 2232.25,
+      "bulk_price": 28662.12,
+      "unit_price": 2388.51,
       "supplier": "NIZA S.A.",
       "images": [
         "18_0.webp"
@@ -6160,8 +6162,8 @@
       "code": 19,
       "description": "MAYONESA MAYOLIVA DP. 12X500 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 52106.75,
-      "unit_price": 4342.23,
+      "bulk_price": 55754.22,
+      "unit_price": 4646.19,
       "supplier": "NIZA S.A.",
       "images": [
         "19_0.webp"
@@ -6171,8 +6173,8 @@
       "code": 21,
       "description": "MOSTAZA NATURA SOBRE 192X8 CC",
       "units_per_bulk": 1,
-      "bulk_price": 10809.3,
-      "unit_price": 10809.3,
+      "bulk_price": 11674.0,
+      "unit_price": 11674.0,
       "supplier": "NIZA S.A.",
       "images": [
         "760_0.webp",
@@ -6183,8 +6185,8 @@
       "code": 215,
       "description": "SALSA GOLF NATURA DP. 20X125",
       "units_per_bulk": 1,
-      "bulk_price": 18184.81,
-      "unit_price": 18184.81,
+      "bulk_price": 19639.59,
+      "unit_price": 19639.59,
       "supplier": "NIZA S.A.",
       "images": [
         "215_0.webp"
@@ -6194,8 +6196,8 @@
       "code": 290,
       "description": "SALSA GOLF NATURA SOBRE 192X8 CC",
       "units_per_bulk": 1,
-      "bulk_price": 16091.22,
-      "unit_price": 16091.22,
+      "bulk_price": 17378.45,
+      "unit_price": 17378.45,
       "supplier": "NIZA S.A.",
       "images": [
         "290_0.webp"
@@ -6205,8 +6207,8 @@
       "code": 388,
       "description": "MOSTAZA NATURA DP. 12X500 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 25121.86,
-      "unit_price": 2093.49,
+      "bulk_price": 27131.6,
+      "unit_price": 2260.97,
       "supplier": "NIZA S.A.",
       "images": [
         "388_0.webp"
@@ -6227,8 +6229,8 @@
       "code": 391,
       "description": "KETCHUP NATURA SOBRE 192X8 CC",
       "units_per_bulk": 1,
-      "bulk_price": 16276.31,
-      "unit_price": 16276.31,
+      "bulk_price": 17578.37,
+      "unit_price": 17578.37,
       "supplier": "NIZA S.A.",
       "images": [
         "391_0.webp"
@@ -6238,8 +6240,8 @@
       "code": 396,
       "description": "KETCHUP NATURA DP. 4X3000 GRS",
       "units_per_bulk": 4,
-      "bulk_price": 58636.09,
-      "unit_price": 14659.02,
+      "bulk_price": 63326.98,
+      "unit_price": 15831.75,
       "supplier": "NIZA S.A.",
       "images": [
         "760_0.webp",
@@ -6294,8 +6296,8 @@
       "code": 511,
       "description": "KETCHUP NATURA DP. 12X250 GRS C/TAPA",
       "units_per_bulk": 12,
-      "bulk_price": 19029.44,
-      "unit_price": 1585.79,
+      "bulk_price": 20551.79,
+      "unit_price": 1712.65,
       "supplier": "NIZA S.A.",
       "images": [
         "511_0.webp"
@@ -6305,8 +6307,8 @@
       "code": 512,
       "description": "SALSA GOLF NATURA 12X250 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 20009.97,
-      "unit_price": 1667.5,
+      "bulk_price": 21610.78,
+      "unit_price": 1800.9,
       "supplier": "NIZA S.A.",
       "images": [
         "512_0.webp"
@@ -6316,8 +6318,8 @@
       "code": 563,
       "description": "KETCHUP NATURA DP. 12X500 GRS C/TAPA",
       "units_per_bulk": 12,
-      "bulk_price": 37429.44,
-      "unit_price": 3119.12,
+      "bulk_price": 40423.79,
+      "unit_price": 3368.65,
       "supplier": "NIZA S.A.",
       "images": [
         "563_0.webp"
@@ -6327,8 +6329,8 @@
       "code": 710,
       "description": "MOSTAZA NATURA DP. 12X250 GRS",
       "units_per_bulk": 12,
-      "bulk_price": 12738.49,
-      "unit_price": 1061.54,
+      "bulk_price": 13757.57,
+      "unit_price": 1146.46,
       "supplier": "NIZA S.A.",
       "images": [
         "710_0.webp"
@@ -6361,8 +6363,8 @@
       "code": 2015,
       "description": "MAYONESA MAYOLIVA DP. 8X950 GRS",
       "units_per_bulk": 8,
-      "bulk_price": 66004.74,
-      "unit_price": 8250.59,
+      "bulk_price": 70625.07,
+      "unit_price": 8828.14,
       "supplier": "NIZA S.A.",
       "images": [
         "2015_0.webp"
@@ -6372,8 +6374,8 @@
       "code": 2018,
       "description": "MOSTAZA NATURA DP 4X3000",
       "units_per_bulk": 4,
-      "bulk_price": 33181.97,
-      "unit_price": 8295.49,
+      "bulk_price": 35836.53,
+      "unit_price": 8959.13,
       "supplier": "NIZA S.A.",
       "images": [
         "2018_0.webp"
@@ -6383,8 +6385,8 @@
       "code": 2080,
       "description": "SALSA GOLF NATURA 4X2900",
       "units_per_bulk": 4,
-      "bulk_price": 66933.72,
-      "unit_price": 16733.43,
+      "bulk_price": 72288.42,
+      "unit_price": 18072.1,
       "supplier": "NIZA S.A.",
       "images": [
         "2080_0.webp"
@@ -9533,7 +9535,7 @@
       "code": 1309,
       "description": "FELFORT MONEDAS JACK 24X60X5GR",
       "units_per_bulk": 24,
-      "bulk_price": 568343.82,
+      "bulk_price": 568343.84,
       "unit_price": 23680.99,
       "supplier": "LA DELICIA FELIPE FORT S.A.",
       "images": []
@@ -9840,7 +9842,7 @@
       "code": 2420,
       "description": "FELFORT BOC. MARROC 24X20X14GRS",
       "units_per_bulk": 24,
-      "bulk_price": 373442.91,
+      "bulk_price": 373442.9,
       "unit_price": 15560.12,
       "supplier": "LA DELICIA FELIPE FORT S.A.",
       "images": [
@@ -15771,11 +15773,11 @@
     },
     {
       "code": 2585,
-      "description": "WOOLITE EX/BLANCO\nDP 12X900",
-      "units_per_bulk": null,
-      "bulk_price": null,
-      "unit_price": null,
-      "supplier": "",
+      "description": "WOOLITE EX/BLANCO DP 12X900",
+      "units_per_bulk": 12,
+      "bulk_price": 70121.94,
+      "unit_price": 5843.49,
+      "supplier": "RECKITT BENCKISER ARGENTINA SA",
       "images": [
         "2585_0.webp"
       ]
@@ -15849,10 +15851,10 @@
     {
       "code": 1522,
       "description": "C.AZUCAR NEGRA 15X300 GRS D.A.",
-      "units_per_bulk": null,
-      "bulk_price": null,
-      "unit_price": null,
-      "supplier": "",
+      "units_per_bulk": 15,
+      "bulk_price": 28210.61,
+      "unit_price": 1880.71,
+      "supplier": "CIA.INTRO. DE BS. AS. SA.",
       "images": [
         "1522_0.webp"
       ]
@@ -16407,6 +16409,393 @@
         "436_1.webp",
         "429_1.webp"
       ]
+    },
+    {
+      "code": 3219,
+      "description": "CHAMP.V CLICQUOT BRUT ENVELOPPE 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 997341.75,
+      "unit_price": 166223.62,
+      "supplier": "BODEGAS CHANDON S.A.",
+      "images": []
+    },
+    {
+      "code": 3220,
+      "description": "CHAMP.V CLICQUOT BRUT PENCIL 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 997341.75,
+      "unit_price": 166223.62,
+      "supplier": "BODEGAS CHANDON S.A.",
+      "images": []
+    },
+    {
+      "code": 3223,
+      "description": "V.TERRAZAS GRAND CAB.SAUV. 2022 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 299991.59,
+      "unit_price": 49998.6,
+      "supplier": "BODEGAS CHANDON S.A.",
+      "images": []
+    },
+    {
+      "code": 3237,
+      "description": "V.LUIGI B. DE SANGRE CHARD 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 130347.24,
+      "unit_price": 21724.54,
+      "supplier": "LEONCIO ARIZU S.A.A.I.C.",
+      "images": []
+    },
+    {
+      "code": 1353,
+      "description": "V.F.FLICHMAN ESTATE CAB SAUV 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 23520.0,
+      "unit_price": 3920.0,
+      "supplier": "FINCA FLICHMAN S.A.",
+      "images": []
+    },
+    {
+      "code": 1767,
+      "description": "V.ZORRO SALVAJE DE UCO MALBEC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 20879.99,
+      "unit_price": 3480.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1774,
+      "description": "V.ZORRO SALVAJE DE UCO CAB/SAUVIG 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 20879.99,
+      "unit_price": 3480.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1775,
+      "description": "V.SOMBRERO SAUVIG/BLANC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 36539.95,
+      "unit_price": 6089.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1776,
+      "description": "V.SOMBRERO CAB/SAUVIGNON 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 36539.95,
+      "unit_price": 6089.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1777,
+      "description": "V.SOMBRERO CAB/FRANC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 36539.95,
+      "unit_price": 6089.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1778,
+      "description": "V.SOMBRERO MALBEC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 36539.95,
+      "unit_price": 6089.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1779,
+      "description": "CHAMP SOMBRERO E/BRUT PINOT NOIR 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 40019.97,
+      "unit_price": 6670.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1780,
+      "description": "V.SOMBRERO MALBEC MAGNUM 6X1500",
+      "units_per_bulk": 6,
+      "bulk_price": 76560.03,
+      "unit_price": 12760.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1781,
+      "description": "V.GRAN SOMBRERO CAB/SAUVIGNON 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 62639.97,
+      "unit_price": 10440.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1782,
+      "description": "V.GRAN SOMBRERO CAB/FRANC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 62639.97,
+      "unit_price": 10440.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1783,
+      "description": "V.GRAN SOMBRERO MALBEC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 62639.97,
+      "unit_price": 10440.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1784,
+      "description": "V.GRAN SOMBRERO CHARDONNAY 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 62639.97,
+      "unit_price": 10440.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1785,
+      "description": "V.GRAN SOMBRERO MALBEC MAGNUM 6X1500",
+      "units_per_bulk": 6,
+      "bulk_price": 125280.04,
+      "unit_price": 20880.01,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1786,
+      "description": "V.HUENTALA LA ISABEL COFERMENTADO 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 132239.96,
+      "unit_price": 22039.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1787,
+      "description": "V.HUENTALA LA ISABEL MALBEC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 132239.96,
+      "unit_price": 22039.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1788,
+      "description": "V.HUENTALA BLOCK 03 MALBEC 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 201839.96,
+      "unit_price": 33639.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1789,
+      "description": "V.HUENTALA CHARDONNAY 6X750",
+      "units_per_bulk": 6,
+      "bulk_price": 132239.96,
+      "unit_price": 22039.99,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1790,
+      "description": "V.HUENTALA CALIZO ALBAR MALBEC 4X750",
+      "units_per_bulk": 4,
+      "bulk_price": 574200.0,
+      "unit_price": 143550.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 1791,
+      "description": "V.HUENTALA CALIZO CARMIN MALBEC 4X750",
+      "units_per_bulk": 4,
+      "bulk_price": 574200.0,
+      "unit_price": 143550.0,
+      "supplier": "K BIN S.A. (HUENTALA)",
+      "images": []
+    },
+    {
+      "code": 3229,
+      "description": "CAGNOLI BONDIOLITAS 15X200GR",
+      "units_per_bulk": 15,
+      "bulk_price": 56892.7,
+      "unit_price": 3792.85,
+      "supplier": "CAGNOLI S.A.",
+      "images": []
+    },
+    {
+      "code": 3230,
+      "description": "CAGNOLI BONDIOLITAS  X10U.",
+      "units_per_bulk": 5,
+      "bulk_price": 89161.72,
+      "unit_price": 17832.34,
+      "supplier": "CAGNOLI S.A.",
+      "images": []
+    },
+    {
+      "code": 3231,
+      "description": "CAGNOLI LOMITOS 15X200GR",
+      "units_per_bulk": 15,
+      "bulk_price": 56892.7,
+      "unit_price": 3792.85,
+      "supplier": "CAGNOLI S.A.",
+      "images": []
+    },
+    {
+      "code": 3232,
+      "description": "CAGNOLI LOMITOS X10U.",
+      "units_per_bulk": 5,
+      "bulk_price": 89161.72,
+      "unit_price": 17832.34,
+      "supplier": "CAGNOLI S.A.",
+      "images": []
+    },
+    {
+      "code": 3224,
+      "description": "FELFORT REFRESCO NARANJA 12X12X27G",
+      "units_per_bulk": 12,
+      "bulk_price": 76335.58,
+      "unit_price": 6361.3,
+      "supplier": "LA DELICIA FELIPE FORT S.A.",
+      "images": []
+    },
+    {
+      "code": 3226,
+      "description": "FELFORT BOMBONERA MARROC 12X264G",
+      "units_per_bulk": 12,
+      "bulk_price": 203043.39,
+      "unit_price": 16920.28,
+      "supplier": "LA DELICIA FELIPE FORT S.A.",
+      "images": []
+    },
+    {
+      "code": 3227,
+      "description": "FELFORT DE A 2 CEREAL 12X20UX12GR",
+      "units_per_bulk": 12,
+      "bulk_price": 183205.39,
+      "unit_price": 15267.12,
+      "supplier": "LA DELICIA FELIPE FORT S.A.",
+      "images": []
+    },
+    {
+      "code": 3228,
+      "description": "FELFORT CEREALFORT CHOC. 8X20X19GR",
+      "units_per_bulk": 8,
+      "bulk_price": 107542.18,
+      "unit_price": 13442.77,
+      "supplier": "LA DELICIA FELIPE FORT S.A.",
+      "images": []
+    },
+    {
+      "code": 3236,
+      "description": "FELFORT BOC. MARROC CRIC 8X60X14GR",
+      "units_per_bulk": 8,
+      "bulk_price": 336999.22,
+      "unit_price": 42124.9,
+      "supplier": "LA DELICIA FELIPE FORT S.A.",
+      "images": []
+    },
+    {
+      "code": 2196,
+      "description": "FSR-303 225-65R17",
+      "units_per_bulk": 1,
+      "bulk_price": null,
+      "unit_price": null,
+      "supplier": "MAPA VIRULANA S.A.I.C.",
+      "images": []
+    },
+    {
+      "code": 2891,
+      "description": "BOTADERO MAPA VIRULANA",
+      "units_per_bulk": 1,
+      "bulk_price": 0.01,
+      "unit_price": 0.01,
+      "supplier": "MAPA VIRULANA S.A.I.C.",
+      "images": []
+    },
+    {
+      "code": 1974,
+      "description": "K.BOLSAS X1",
+      "units_per_bulk": 1,
+      "bulk_price": null,
+      "unit_price": null,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 2388,
+      "description": "PAÑ AMA.CLASSIC+VERDE G 1X80",
+      "units_per_bulk": 1,
+      "bulk_price": 19113.66,
+      "unit_price": 19113.66,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 2504,
+      "description": "HUGGIES EXHIBIDOR DE PIE X1",
+      "units_per_bulk": 1,
+      "bulk_price": null,
+      "unit_price": null,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 2595,
+      "description": "HUGGIES PUNTERA MAGNUM X1",
+      "units_per_bulk": 1,
+      "bulk_price": null,
+      "unit_price": null,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 3233,
+      "description": "TOALLA H. OLE CAL R/N C/TAPA 24X48",
+      "units_per_bulk": 24,
+      "bulk_price": 191424.72,
+      "unit_price": 7976.03,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 3234,
+      "description": "TOALLA HUM.CUID 4EN1 6X184",
+      "units_per_bulk": 6,
+      "bulk_price": 70720.67,
+      "unit_price": 11786.78,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 3235,
+      "description": "TOALLA HUM.LIMP.EFEC.ARG 24X48",
+      "units_per_bulk": 24,
+      "bulk_price": 69636.37,
+      "unit_price": 2901.52,
+      "supplier": "KIMBERLY CLARK ARGENTINA S.A.",
+      "images": []
+    },
+    {
+      "code": 3071,
+      "description": "AC.OLIVA PREM.QUINQUELA 6X500",
+      "units_per_bulk": 6,
+      "bulk_price": 86163.14,
+      "unit_price": 14360.52,
+      "supplier": "DELCAFOOD S.R.L.",
+      "images": []
     }
   ]
 }
